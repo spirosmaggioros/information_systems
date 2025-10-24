@@ -1,13 +1,32 @@
 import os
-from collections import defaultdict
 
 import networkx as nx
 
 
 def ds_to_graphs(dataset_folder: str) -> dict:
+    """
+    Transform raw .txt graph data to networkx graphs(and more)
+    :param dataset_folder: Path from current directory to dataset directory(for example: data/ENZYMES)
+    :type dataset_fodler: str
+
+    :returns: dict
+              graphs: list[nx.Graph]
+              graph_classes: list[int]
+              node_labels: list[int]
+              node_to_graph: dict
+              edges: list[[int, int]]
+
+    Example
+    _______
+
+    from dataloader.dataloader import ds_to_graphs
+    data = ds_to_graphs("data/ENZYMES")
+    graphs = data["graphs"]
+    """
+
     no_graphs: int = 0
-    classes: list = []
-    graph_to_nodes: dict = defaultdict(list)
+    graph_classes: list = []
+    node_to_graph: dict = {}
     node_labels: list = []
     edges: list = []
 
@@ -29,7 +48,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     line = line.strip()
                     if line:
                         no_graphs += 1
-                        classes.append(int(line))
+                        graph_classes.append(int(line))
 
         if "_graph_indicator.txt" in file:
             with open(file_path, "r") as f:
@@ -37,7 +56,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     line = line.strip()
                     if line:
                         graph_id = int(line)
-                        graph_to_nodes[graph_id].append(i + 1)
+                        node_to_graph[(i + 1)] = graph_id
 
         if "_node_labels.txt" in file:
             with open(file_path, "r") as f:
@@ -47,11 +66,15 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                         node_labels.append(int(line))
 
     graphs = [nx.Graph() for _ in range(no_graphs)]
+    for edge in edges:
+        u, v = edge
+        assert node_to_graph[u] == node_to_graph[v], "Nodes existing in multiple graphs"
+        graphs[node_to_graph[u] - 1].add_edge(u, v)
 
     return {
         "graphs": graphs,
-        "classes": classes,
+        "graph_classes": graph_classes,
         "node_labels": node_labels,
-        "graph_to_nodes": dict(graph_to_nodes),
+        "node_to_graph": node_to_graph,
         "edges": edges,
     }
