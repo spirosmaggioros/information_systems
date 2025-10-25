@@ -1,11 +1,13 @@
 import os
 
 import networkx as nx
+from torch_geometric.data import Data
+from torch_geometric.utils import from_networkx
 
 
 def ds_to_graphs(dataset_folder: str) -> dict:
     """
-    Transform raw .txt graph data to networkx graphs(and more)
+    Transforms raw .txt graph data to networkx graphs(and more)
     :param dataset_folder: Path from current directory to dataset directory(for example: data/ENZYMES)
     :type dataset_fodler: str
 
@@ -78,3 +80,26 @@ def ds_to_graphs(dataset_folder: str) -> dict:
         "node_to_graph": node_to_graph,
         "edges": edges,
     }
+
+
+def nx_to_torch_data(data: list[nx.Graph]) -> list[Data]:
+    """
+    Transforms a list of nx.Graph to a list of torch_geometric.data.Data for GNN training
+    :param data: the input list of graphs
+    :type data: list[nx.Graph]
+
+    :returns: list[torch_geometric.data.Data]
+
+    Example
+    _______
+    from dataloader.dataloader import ds_to_graphs
+    data = ds_to_graphs("data/ENZYMES")
+    graphs = data["graphs"]
+
+    gnn_data = nx_to_torch_data(graphs)
+    """
+    torch_data = []
+    for graph in data:
+        torch_data.append(from_networkx(graph))
+
+    return torch_data
