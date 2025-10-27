@@ -35,6 +35,7 @@ class MLPDataset(Dataset):
 class MLP(nn.Module):
     def __init__(
         self,
+        num_classes: int,
         hidden_size: int = 256,
         task: str = "classification",
         dropout: float = 0.2,
@@ -81,7 +82,7 @@ class MLP(nn.Module):
         self.model = nn.Sequential(
             mlp_layer(self.hidden_size),
             mlp_layer(self.hidden_size // 2),
-            nn.LazyLinear(1),
+            nn.LazyLinear(num_classes),
         ).to(device)
 
         if init_input > 0:

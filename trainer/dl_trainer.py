@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pandas as pd
 import torch
@@ -25,8 +25,11 @@ def train_step(
     dataloader: DataLoader,
     loss_fn: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
+    mode: str,
+    num_classes: Optional[int] = None,
     device: str = "cuda",
 ) -> dict:
+    assert mode in ["binary", "multiclass"]
     model.train()
 
     stats = {
@@ -38,19 +41,35 @@ def train_step(
         "train_f1": 0.0,
     }
 
-    mode = "binary"  # change in the future, if needed
-
-    acc = Accuracy(task=mode).to(device)
-    auc = AUROC(task=mode).to(device)
-    recall = Recall(task=mode).to(device)
-    precision = Precision(task=mode).to(device)
-    specificity = Specificity(task=mode).to(device)
-    f1_score = F1Score(task=mode).to(device)
+    if mode == "multiclass":
+        assert num_classes is not None
+        acc = Accuracy(task=mode, average="macro", num_classes=num_classes).to(device)
+        auc = AUROC(task=mode, average="macro", num_classes=num_classes).to(device)
+        recall = Recall(task=mode, average="macro", num_classes=num_classes).to(device)
+        precision = Precision(task=mode, average="macro", num_classes=num_classes).to(
+            device
+        )
+        specificity = Specificity(
+            task=mode, average="macro", num_classes=num_classes
+        ).to(device)
+        f1_score = F1Score(task=mode, average="macro", num_classes=num_classes).to(
+            device
+        )
+    else:
+        acc = Accuracy(task=mode).to(device)
+        auc = AUROC(task=mode).to(device)
+        recall = Recall(task=mode).to(device)
+        precision = Precision(task=mode).to(device)
+        specificity = Specificity(task=mode).to(device)
+        f1_score = F1Score(task=mode).to(device)
 
     for X, y in dataloader:
         X, y = X.to(device), y.to(device)
 
-        X, y = X.float(), y.float()
+        if mode != "multiclass":
+            X, y = X.float(), y.float()
+        else:
+            X, y = X.float(), y.long()
 
         optimizer.zero_grad()
 
@@ -61,7 +80,11 @@ def train_step(
         loss.backward()
         optimizer.step()
 
-        y_pred_classes = (torch.sigmoid(y_pred) > 0.5).float()
+        y_pred_classes = (
+            (torch.sigmoid(y_pred) > 0.5).float()
+            if mode == "binary"
+            else torch.argmax(y_pred, dim=1)
+        )
         acc.update(y_pred_classes, y)
         auc.update(y_pred, y)
         recall.update(y_pred_classes, y)
@@ -83,9 +106,11 @@ def test_step(
     model: torch.nn.Module,
     dataloader: DataLoader,
     loss_fn: torch.nn.Module,
+    mode: str,
+    num_classes: Optional[int] = None,
     device: str = "cuda",
 ) -> dict:
-
+    assert mode in ["binary", "multiclass"]
     model.eval()
 
     stats = {
@@ -98,25 +123,47 @@ def test_step(
         "test_confussion_matrix": [],
     }
 
-    mode = "binary"  # change in the future, if needed
-
-    acc = Accuracy(task=mode).to(device)
-    auc = AUROC(task=mode).to(device)
-    recall = Recall(task=mode).to(device)
-    precision = Precision(task=mode).to(device)
-    specificity = Specificity(task=mode).to(device)
-    f1_score = F1Score(task=mode).to(device)
-    confmat = ConfusionMatrix(task=mode).to(device)
+    if mode == "multiclass":
+        assert num_classes is not None
+        acc = Accuracy(task=mode, average="macro", num_classes=num_classes).to(device)
+        auc = AUROC(task=mode, average="macro", num_classes=num_classes).to(device)
+        recall = Recall(task=mode, average="macro", num_classes=num_classes).to(device)
+        precision = Precision(task=mode, average="macro", num_classes=num_classes).to(
+            device
+        )
+        specificity = Specificity(
+            task=mode, average="macro", num_classes=num_classes
+        ).to(device)
+        f1_score = F1Score(task=mode, average="macro", num_classes=num_classes).to(
+            device
+        )
+        confmat = ConfusionMatrix(task=mode, num_classes=num_classes).to(device)
+    else:
+        acc = Accuracy(task=mode).to(device)
+        auc = AUROC(task=mode).to(device)
+        recall = Recall(task=mode).to(device)
+        precision = Precision(task=mode).to(device)
+        specificity = Specificity(task=mode).to(device)
+        f1_score = F1Score(task=mode).to(device)
+        confmat = ConfusionMatrix(task=mode).to(device)
 
     with torch.no_grad():
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
-            X, y = X.float(), y.float()
+
+            if mode != "multiclass":
+                X, y = X.float(), y.float()
+            else:
+                X, y = X.float(), y.long()
 
             test_pred = model(X)
             _ = loss_fn(test_pred, y)
 
-            y_pred_classes = (torch.sigmoid(test_pred) > 0.5).float()
+            y_pred_classes = (
+                (torch.sigmoid(test_pred) > 0.5).float()
+                if mode == "binary"
+                else torch.argmax(test_pred, dim=1)
+            )
             acc.update(y_pred_classes, y)
             auc.update(test_pred, y)
             recall.update(y_pred_classes, y)
@@ -141,6 +188,7 @@ def train(
     test_dataloader: DataLoader,
     loss_fn: torch.nn.Module,
     optimizer: torch.optim,
+    mode: str,
     batch_size: int = 128,
     epochs: int = 100,
     patience: int = 10,
@@ -179,6 +227,7 @@ def train(
             dataloader=train_dataloader,
             loss_fn=loss_fn,
             optimizer=optimizer,
+            mode=mode,
             device=device,
         )
 
@@ -186,6 +235,7 @@ def train(
             model=model,
             dataloader=test_dataloader,
             loss_fn=loss_fn,
+            mode=mode,
             device=device,
         )
 
@@ -269,7 +319,7 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(train_ds, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(val_ds, batch_size=32, shuffle=True)
 
-    model = MLP(device="mps", init_input=len(X_train[0]))
+    model = MLP(num_classes=1, device="mps", init_input=len(X_train[0]))
     loss = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(
         model.parameters(), lr=0.001, weight_decay=0.1, amsgrad=True
@@ -281,6 +331,7 @@ if __name__ == "__main__":
         test_dataloader,
         loss_fn=loss,
         optimizer=optimizer,
+        mode="binary",
         batch_size=32,
         patience=10,
         epochs=100,
