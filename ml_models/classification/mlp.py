@@ -10,7 +10,7 @@ from ml_models.utils import init_weights
 
 class MLPDataset(Dataset):
     """
-    A class for managing datasets that will be used for the MLP trainingA
+    A class for managing datasets that will be used for the MLP training
 
     :param X: the input data
     :type X: list
