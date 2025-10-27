@@ -35,7 +35,16 @@ class EarlyStopper:
 
 
 def save_model(model: torch.nn.Module, target_dir: str, model_name: str) -> None:
+    """
+    Saves the model to the target directory with the passed model name
 
+    :param model: the input model
+    :type model: nn.Module
+    :param target_dir: the target directory
+    :type target_dir: str
+    :param model_name: the name of the model(with .pth suffix)
+    :type model_name: str
+    """
     target_dir_path = Path(target_dir)
     target_dir_path.mkdir(parents=True, exist_ok=True)
 

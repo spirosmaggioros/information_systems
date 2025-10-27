@@ -52,6 +52,12 @@ class MLP(nn.Module):
         :type task: str
         :param dropout: dropout value
         :type dropout: float
+
+        Example
+        _______
+
+        from ml_models.classification.mlp import MLP
+        model = MLP()
         """
         super(MLP, self).__init__()
 
