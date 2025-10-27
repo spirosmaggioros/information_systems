@@ -49,4 +49,5 @@ def visualize_embeddings_manifold(
         ax.set_zlabel("Z")
         ax.set_title(f"Latent embeddings with {method}")
 
+    plt.savefig(save_to)
     plt.show()
