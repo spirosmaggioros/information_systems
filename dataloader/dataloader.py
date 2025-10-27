@@ -83,6 +83,9 @@ def ds_to_graphs(dataset_folder: str) -> dict:
         assert node_to_graph[u] == node_to_graph[v], "Nodes existing in multiple graphs"
         graphs[node_to_graph[u] - 1].add_edge(u, v)
 
+    for g in graphs:
+        nx.set_node_attributes(g, node_attributes, name="node_attributes")
+
     return {
         "graphs": graphs,
         "graph_classes": graph_classes,
