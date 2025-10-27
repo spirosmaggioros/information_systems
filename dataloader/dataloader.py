@@ -1,4 +1,5 @@
 import os
+import re
 
 import networkx as nx
 from torch_geometric.data import Data
@@ -15,6 +16,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
               graphs: list[nx.Graph]
               graph_classes: list[int]
               node_labels: list[int]
+              node_attributes: dict
               node_to_graph: dict
               edges: list[[int, int]]
 
@@ -30,6 +32,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     graph_classes: list = []
     node_to_graph: dict = {}
     node_labels: list = []
+    node_attributes: dict = {}
     edges: list = []
 
     for file in os.listdir(dataset_folder):
@@ -60,6 +63,13 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                         graph_id = int(line)
                         node_to_graph[(i + 1)] = graph_id
 
+        if "_node_attributes.txt" in file:
+            with open(file_path, "r") as f:
+                for i, line in enumerate(f):
+                    line = line.strip()
+                    attr = [float(x) for x in re.split("[,]", line)]
+                    node_attributes[i] = attr
+
         if "_node_labels.txt" in file:
             with open(file_path, "r") as f:
                 for line in f:
@@ -77,6 +87,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
         "graphs": graphs,
         "graph_classes": graph_classes,
         "node_labels": node_labels,
+        "node_attributes": node_attributes,
         "node_to_graph": node_to_graph,
         "edges": edges,
     }
