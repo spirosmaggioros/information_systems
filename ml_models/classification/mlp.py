@@ -37,7 +37,6 @@ class MLP(nn.Module):
         self,
         num_classes: int,
         hidden_size: int = 256,
-        task: str = "classification",
         dropout: float = 0.2,
         use_bn: bool = False,
         bn: str = "bn",
@@ -49,8 +48,6 @@ class MLP(nn.Module):
 
         :param hidden_size: the amount of hidden features
         :type hidden_size: int
-        :param task: either classification or regression
-        :type task: str
         :param dropout: dropout value
         :type dropout: float
 
@@ -63,7 +60,6 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
 
         self.hidden_size = hidden_size
-        self.classification = True if task == "classification" else False
         self.dropout = dropout
         self.use_bn = use_bn
         self.bn = bn
