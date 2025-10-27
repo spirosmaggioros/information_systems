@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch_geometric.data import Data
 from torch_geometric.nn import GATConv, Sequential
@@ -73,5 +72,4 @@ class GAT(nn.Module):
 
     def forward(self, data: Data) -> torch.Tensor:
         x, edge_index = data.x, data.edge_index
-        x = self.gat_net(x, edge_index)
-        return F.log_softmax(x, dim=1)
+        return self.gat_net(x, edge_index)

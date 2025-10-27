@@ -17,7 +17,7 @@ from torchmetrics import (
 from tqdm import tqdm
 
 from ml_models.classification.mlp import MLP, MLPDataset
-from trainer.utils import EarlyStopper, save_model
+from trainer.utils import EarlyStopper, save_torch_model
 
 
 def train_step(
@@ -241,7 +241,7 @@ def train(
 
         if test_stats["test_acc"] > best_res:
             best_res = test_stats["test_acc"]
-            save_model(model, target_dir, model_name)
+            save_torch_model(model, target_dir, model_name)
             print(
                 f"[INFO] New best model saved at {target_dir} with test accuracy: {best_res:.4f}"
             )

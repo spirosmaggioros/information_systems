@@ -34,7 +34,7 @@ class EarlyStopper:
         return self.counter > self.patience
 
 
-def save_model(model: torch.nn.Module, target_dir: str, model_name: str) -> None:
+def save_torch_model(model: torch.nn.Module, target_dir: str, model_name: str) -> None:
     """
     Saves the model to the target directory with the passed model name
 
@@ -55,3 +55,13 @@ def save_model(model: torch.nn.Module, target_dir: str, model_name: str) -> None
 
     print(f"[INFO] Saving model to: {model_save_path}")
     torch.save(obj=model.state_dict(), f=model_save_path)
+
+
+def load_torch_model(model: torch.nn.Module, model_weights: str, device: str) -> None:
+    state_dict = torch.load(model_weights, map_location=torch.device(device))
+    missing_keys, expected_keys = model.load_state_dict(state_dict)
+
+    if missing_keys:
+        print(f"Warning: Missing keys in model: {missing_keys}")
+    if expected_keys:
+        print(f"Warning: Unexpected keys in model: {expected_keys}")
