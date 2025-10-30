@@ -19,6 +19,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
               node_attributes: dict
               node_to_graph: dict
               edges: list[[int, int]]
+              edge_labels: list[int]
 
     Example
     _______
@@ -34,6 +35,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     node_labels: list = []
     node_attributes: dict = {}
     edges: list = []
+    edge_labels: list = []
 
     for file in os.listdir(dataset_folder):
         file_path = os.path.join(dataset_folder, file)
@@ -68,7 +70,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                 for i, line in enumerate(f):
                     line = line.strip()
                     attr = [float(x) for x in re.split("[,]", line)]
-                    node_attributes[i] = attr
+                    node_attributes[(i + 1)] = attr
 
         if "_node_labels.txt" in file:
             with open(file_path, "r") as f:
@@ -77,14 +79,29 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     if line:
                         node_labels.append(int(line))
 
+        if "_edge_labels.txt" in file:
+            with open(file_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        edge_labels.append(int(line))
+
     graphs = [nx.Graph() for _ in range(no_graphs)]
-    for edge in edges:
+
+    has_edge_labels = len(edge_labels) > 0
+
+    for idx, edge in enumerate(edges):
         u, v = edge
-        assert node_to_graph[u] == node_to_graph[v], "Nodes existing in multiple graphs"
+        assert node_to_graph[u] == node_to_graph[v], "Nodes exist in multiple graphs"
         graphs[node_to_graph[u] - 1].add_edge(u, v)
 
     for g in graphs:
         nx.set_node_attributes(g, node_attributes, name="node_attributes")
+
+    if has_edge_labels:
+        edge_attr_dict = {edges[i]: edge_labels[i] for i in range(len(edge_labels))}
+        for g in graphs:
+            nx.set_edge_attributes(g, edge_attr_dict, name="edge_label")
 
     return {
         "graphs": graphs,
@@ -93,6 +110,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
         "node_attributes": node_attributes,
         "node_to_graph": node_to_graph,
         "edges": edges,
+        "edge_labels": edge_labels,
     }
 
 
