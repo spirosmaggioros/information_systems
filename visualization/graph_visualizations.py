@@ -1,15 +1,17 @@
+from typing import List, Optional
+
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import networkx as nx
-import matplotlib.cm as cm
 
 
-def plot_graph(graph: nx.Graph, node_labels: list = None) -> None:
+def plot_graph(graph: nx.Graph, node_labels: Optional[List[int]] = None) -> None:
     """
     Simple plot of a nx.Graph with node labels
     - If no node_labels are given: nodes are blue and labeled by ID
     - If node_labels are given: each label has a unique color
     - Edges colored by their 'edge_label' attribute if present, otherwise gray
-    
+
     :param graph: The input graph
     :type graph: nx.Graph
     :param node_labels: Optionally pass the node labels
@@ -37,7 +39,7 @@ def plot_graph(graph: nx.Graph, node_labels: list = None) -> None:
         label_to_color = {lbl: color_map(i) for i, lbl in enumerate(unique_labels)}
         node_colors = [label_to_color[lbl] for lbl in curr_node_labels]
     else:
-        node_colors = "skyblue"
+        node_colors = ["skyblue"] * len(nodes)
 
     labels = {n: str(n) for n in nodes}
 
@@ -45,10 +47,12 @@ def plot_graph(graph: nx.Graph, node_labels: list = None) -> None:
     if edge_attrs:
         unique_edge_labels = sorted(set(edge_attrs.values()))
         edge_cmap = cm.get_cmap("Set2", len(unique_edge_labels))
-        edge_label_to_color = {lbl: edge_cmap(i) for i, lbl in enumerate(unique_edge_labels)}
+        edge_label_to_color = {
+            lbl: edge_cmap(i) for i, lbl in enumerate(unique_edge_labels)
+        }
         edge_colors = [edge_label_to_color[edge_attrs[e]] for e in edges]
     else:
-        edge_colors = "gray"
+        edge_colors = ["gray"] * len(edges)
 
     nx.draw(
         graph,
