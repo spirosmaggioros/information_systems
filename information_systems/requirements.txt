@@ -1,0 +1,5 @@
+numpy
+scipy
+python-igraph
+
+# conda install -c conda-forge graph-tool
