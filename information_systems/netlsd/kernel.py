@@ -1,11 +1,20 @@
+from typing import Tuple, Union
+
 import numpy as np
-from .utils import check_1d, check_2d, eigenvalues_auto, graph_to_laplacian, mat_to_laplacian
+
+from .utils import (
+    check_1d,
+    check_2d,
+    eigenvalues_auto,
+    graph_to_laplacian,
+    mat_to_laplacian,
+)
 
 
-def compare(descriptor1, descriptor2):
+def compare(descriptor1: np.ndarray, descriptor2: np.ndarray) -> float:
     """
     Computes the distance between two NetLSD representations.
-    
+
     Parameters
     ----------
     descriptor1: numpy.ndarray
@@ -19,16 +28,23 @@ def compare(descriptor1, descriptor2):
         NetLSD distance
 
     """
-    return np.linalg.norm(descriptor1-descriptor2)
+    return float(np.linalg.norm(descriptor1 - descriptor2))
 
 
-def netlsd(inp, timescales=np.logspace(-2, 2, 250), kernel='heat', eigenvalues='auto', normalization='empty', normalized_laplacian=True):
+def netlsd(
+    inp: Union[np.ndarray, object],
+    timescales: np.ndarray = np.logspace(-2, 2, 250),
+    kernel: str = "heat",
+    eigenvalues: Union[str, int, Tuple[int, int]] = "auto",
+    normalization: Union[str, np.ndarray, bool, None] = "empty",
+    normalized_laplacian: bool = True,
+) -> np.ndarray:
     """
     Computes NetLSD signature from some given input, timescales, and normalization.
 
-    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues. 
+    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues.
     For precise definition, please refer to "NetLSD: Hearing the Shape of a Graph" by A. Tsitsulin, D. Mottin, P. Karras, A. Bronstein, E. Müller. Published at KDD'18.
-    
+
     Parameters
     ----------
     inp: obj
@@ -57,23 +73,55 @@ def netlsd(inp, timescales=np.logspace(-2, 2, 250), kernel='heat', eigenvalues='
         NetLSD signature
 
     """
-    if kernel not in {'heat', 'wave'}:
-        raise AttributeError('Unirecognized kernel type: expected one of [\'heat\', \'wave\'], got {0}'.format(kernel))
+    if kernel not in {"heat", "wave"}:
+        raise AttributeError(
+            "Unirecognized kernel type: expected one of ['heat', 'wave'], got {0}".format(
+                kernel
+            )
+        )
     if not isinstance(normalized_laplacian, bool):
-        raise AttributeError('Unknown Laplacian type: expected bool, got {0}'.format(normalized_laplacian))
+        raise AttributeError(
+            "Unknown Laplacian type: expected bool, got {0}".format(
+                normalized_laplacian
+            )
+        )
     if not isinstance(eigenvalues, (int, tuple, str)):
-        raise AttributeError('Unirecognized requested eigenvalue number: expected type of [\'str\', \'tuple\', or \'int\'], got {0}'.format(type(eigenvalues)))
+        raise AttributeError(
+            "Unirecognized requested eigenvalue number: expected type of ['str', 'tuple', or 'int'], got {0}".format(
+                type(eigenvalues)
+            )
+        )
     if not isinstance(timescales, np.ndarray):
-        raise AttributeError('Unirecognized timescales data type: expected np.ndarray, got {0}'.format(type(timescales)))
+        raise AttributeError(
+            "Unirecognized timescales data type: expected np.ndarray, got {0}".format(
+                type(timescales)
+            )
+        )
     if timescales.ndim != 1:
-        raise AttributeError('Unirecognized timescales dimensionality: expected a vector, got {0}-d array'.format(timescales.ndim))
-    if normalization not in {'complete', 'empty', 'none', True, False, None}:
+        raise AttributeError(
+            "Unirecognized timescales dimensionality: expected a vector, got {0}-d array".format(
+                timescales.ndim
+            )
+        )
+    if normalization not in {"complete", "empty", "none", True, False, None}:
         if not isinstance(normalization, np.ndarray):
-            raise AttributeError('Unirecognized normalization type: expected one of [\'complete\', \'empty\', None or np.ndarray], got {0}'.format(normalization))
+            raise AttributeError(
+                "Unirecognized normalization type: expected one of ['complete', 'empty', None or np.ndarray], got {0}".format(
+                    normalization
+                )
+            )
         if normalization.ndim != 1:
-            raise AttributeError('Unirecognized normalization dimensionality: expected a vector, got {0}-d array'.format(normalization.ndim))
+            raise AttributeError(
+                "Unirecognized normalization dimensionality: expected a vector, got {0}-d array".format(
+                    normalization.ndim
+                )
+            )
         if timescales.shape[0] != normalization.shape[0]:
-            raise AttributeError('Unirecognized normalization dimensionality: expected {0}-length vector, got length {1}'.format(timescales.shape[0], normalization.shape[0]))
+            raise AttributeError(
+                "Unirecognized normalization dimensionality: expected {0}-length vector, got length {1}".format(
+                    timescales.shape[0], normalization.shape[0]
+                )
+            )
 
     eivals = check_1d(inp)
     if eivals is None:
@@ -81,23 +129,33 @@ def netlsd(inp, timescales=np.logspace(-2, 2, 250), kernel='heat', eigenvalues='
         if mat is None:
             mat = graph_to_laplacian(inp, normalized_laplacian)
             if mat is None:
-                raise ValueError('Unirecognized input type: expected one of [\'np.ndarray\', \'scipy.sparse\', \'networkx.Graph\',\' graph_tool.Graph,\' or \'igraph.Graph\'], got {0}'.format(type(inp)))
+                raise ValueError(
+                    "Unirecognized input type: expected one of ['np.ndarray', 'scipy.sparse', 'networkx.Graph',' graph_tool.Graph,' or 'igraph.Graph'], got {0}".format(
+                        type(inp)
+                    )
+                )
         else:
             mat = mat_to_laplacian(inp, normalized_laplacian)
         eivals = eigenvalues_auto(mat, eigenvalues)
-    if kernel == 'heat':
+    if kernel == "heat":
         return _hkt(eivals, timescales, normalization, normalized_laplacian)
     else:
         return _wkt(eivals, timescales, normalization, normalized_laplacian)
 
 
-def heat(inp, timescales=np.logspace(-2, 2, 250), eigenvalues='auto', normalization='empty', normalized_laplacian=True):
+def heat(
+    inp: Union[np.ndarray, object],
+    timescales: np.ndarray = np.logspace(-2, 2, 250),
+    eigenvalues: Union[str, int, Tuple[int, int]] = "auto",
+    normalization: Union[str, np.ndarray, bool, None] = "empty",
+    normalized_laplacian: bool = True,
+) -> np.ndarray:
     """
     Computes heat kernel trace from some given input, timescales, and normalization.
 
-    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues. 
+    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues.
     For precise definition, please refer to "NetLSD: Hearing the Shape of a Graph" by A. Tsitsulin, D. Mottin, P. Karras, A. Bronstein, E. Müller. Published at KDD'18.
-    
+
     Parameters
     ----------
     inp: obj
@@ -124,16 +182,24 @@ def heat(inp, timescales=np.logspace(-2, 2, 250), eigenvalues='auto', normalizat
         Heat kernel trace signature
 
     """
-    return netlsd(inp, timescales, 'heat', eigenvalues, normalization, normalized_laplacian)
+    return netlsd(
+        inp, timescales, "heat", eigenvalues, normalization, normalized_laplacian
+    )
 
 
-def wave(inp, timescales=np.linspace(0, 2*np.pi, 250), eigenvalues='auto', normalization='empty', normalized_laplacian=True):
+def wave(
+    inp: Union[np.ndarray, object],
+    timescales: np.ndarray = np.linspace(0, 2 * np.pi, 250),
+    eigenvalues: Union[str, int, Tuple[int, int]] = "auto",
+    normalization: Union[str, np.ndarray, bool, None] = "empty",
+    normalized_laplacian: bool = True,
+) -> np.ndarray:
     """
     Computes wave kernel trace from some given input, timescales, and normalization.
 
-    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues. 
+    Accepts matrices, common Python graph libraries' graphs, or vectors of eigenvalues.
     For precise definition, please refer to "NetLSD: Hearing the Shape of a Graph" by A. Tsitsulin, D. Mottin, P. Karras, A. Bronstein, E. Müller. Published at KDD'18.
-    
+
     Parameters
     ----------
     inp: obj
@@ -160,15 +226,22 @@ def wave(inp, timescales=np.linspace(0, 2*np.pi, 250), eigenvalues='auto', norma
         Wave kernel trace signature
 
     """
-    return netlsd(inp, timescales, 'wave', eigenvalues, normalization, normalized_laplacian)
+    return netlsd(
+        inp, timescales, "wave", eigenvalues, normalization, normalized_laplacian
+    )
 
 
-def _hkt(eivals, timescales, normalization, normalized_laplacian):
+def _hkt(
+    eivals: np.ndarray,
+    timescales: np.ndarray,
+    normalization: Union[str, np.ndarray, bool, None],
+    normalized_laplacian: bool,
+) -> np.ndarray:
     """
     Computes heat kernel trace from given eigenvalues, timescales, and normalization.
 
     For precise definition, please refer to "NetLSD: Hearing the Shape of a Graph" by A. Tsitsulin, D. Mottin, P. Karras, A. Bronstein, E. Müller. Published at KDD'18.
-    
+
     Parameters
     ----------
     eivals : numpy.ndarray
@@ -195,9 +268,9 @@ def _hkt(eivals, timescales, normalization, normalized_laplacian):
         hkt[idx] = np.sum(np.exp(-t * eivals))
     if isinstance(normalization, np.ndarray):
         return hkt / normalization
-    if normalization == 'empty' or normalization == True:
+    if normalization == "empty" or normalization:
         return hkt / nv
-    if normalization == 'complete':
+    if normalization == "complete":
         if normalized_laplacian:
             return hkt / (1 + (nv - 1) * np.exp(-timescales))
         else:
@@ -205,12 +278,17 @@ def _hkt(eivals, timescales, normalization, normalized_laplacian):
     return hkt
 
 
-def _wkt(eivals, timescales, normalization, normalized_laplacian):
+def _wkt(
+    eivals: np.ndarray,
+    timescales: np.ndarray,
+    normalization: Union[str, np.ndarray, bool, None],
+    normalized_laplacian: bool,
+) -> np.ndarray:
     """
     Computes wave kernel trace from given eigenvalues, timescales, and normalization.
 
     For precise definition, please refer to "NetLSD: Hearing the Shape of a Graph" by A. Tsitsulin, D. Mottin, P. Karras, A. Bronstein, E. Müller. Published at KDD'18.
-    
+
     Parameters
     ----------
     eivals : numpy.ndarray
@@ -237,9 +315,9 @@ def _wkt(eivals, timescales, normalization, normalized_laplacian):
         wkt[idx] = np.sum(np.exp(-1j * t * eivals))
     if isinstance(normalization, np.ndarray):
         return wkt / normalization
-    if normalization == 'empty' or normalization == True:
+    if normalization == "empty" or normalization:
         return wkt / nv
-    if normalization == 'complete':
+    if normalization == "complete":
         if normalized_laplacian:
             return wkt / (1 + (nv - 1) * np.cos(timescales))
         else:

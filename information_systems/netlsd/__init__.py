@@ -1,1 +1,1 @@
-from .kernel import netlsd, heat, wave, compare
+from .kernel import compare, heat, netlsd, wave

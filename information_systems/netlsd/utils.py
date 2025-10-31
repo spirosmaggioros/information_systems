@@ -1,10 +1,12 @@
+from typing import Any, Optional, Tuple, Union
+
 import numpy as np
 import scipy.linalg as spl
 import scipy.sparse as sps
 import scipy.sparse.linalg as spsl
 
 
-def check_1d(inp):
+def check_1d(inp: Any) -> Optional[np.ndarray]:
     """
     Check input to be a vector. Converts lists to np.ndarray.
 
@@ -30,16 +32,17 @@ def check_1d(inp):
     if isinstance(inp, list):
         return check_1d(np.array(inp))
     if isinstance(inp, np.ndarray):
-        if inp.ndim == 1: # input is a vector
+        if inp.ndim == 1:  # input is a vector
             return inp
+    return None
 
 
-def check_2d(inp):
+def check_2d(inp: Any) -> Optional[Union[np.ndarray, sps.spmatrix]]:
     """
     Check input to be a matrix. Converts lists of lists to np.ndarray.
 
     Also allows the input to be a scipy sparse matrix.
-    
+
     Parameters
     ----------
     inp : obj
@@ -62,19 +65,20 @@ def check_2d(inp):
     if isinstance(inp, list):
         return check_2d(np.array(inp))
     if isinstance(inp, (np.ndarray, np.matrixlib.defmatrix.matrix)):
-        if inp.ndim == 2: # input is a dense matrix
+        if inp.ndim == 2:  # input is a dense matrix
             return inp
     if sps.issparse(inp):
-        if inp.ndim == 2: # input is a sparse matrix
+        if inp.ndim == 2:  # input is a sparse matrix
             return inp
+    return None
 
 
-def graph_to_laplacian(G, normalized=True):
+def graph_to_laplacian(G: Any, normalized: bool = True) -> Optional[sps.spmatrix]:
     """
     Converts a graph from popular Python packages to Laplacian representation.
 
     Currently support NetworkX, graph_tool and igraph.
-    
+
     Parameters
     ----------
     G : obj
@@ -99,6 +103,7 @@ def graph_to_laplacian(G, normalized=True):
     """
     try:
         import networkx as nx
+
         if isinstance(G, nx.Graph):
             if normalized:
                 return nx.normalized_laplacian_matrix(G)
@@ -107,7 +112,8 @@ def graph_to_laplacian(G, normalized=True):
     except ImportError:
         pass
     try:
-        import graph_tool.all as gt    # type: ignore
+        import graph_tool.all as gt
+
         if isinstance(G, gt.Graph):
             if normalized:
                 return gt.laplacian_type(G, normalized=True)
@@ -117,6 +123,7 @@ def graph_to_laplacian(G, normalized=True):
         pass
     try:
         import igraph as ig
+
         if isinstance(G, ig.Graph):
             if normalized:
                 return np.array(G.laplacian(normalized=True))
@@ -124,12 +131,15 @@ def graph_to_laplacian(G, normalized=True):
                 return np.array(G.laplacian())
     except ImportError:
         pass
+    return None
 
 
-def mat_to_laplacian(mat, normalized):
+def mat_to_laplacian(
+    mat: Union[np.ndarray, sps.spmatrix], normalized: bool
+) -> Union[np.ndarray, sps.spmatrix]:
     """
     Converts a sparse or dence adjacency matrix to Laplacian.
-    
+
     Parameters
     ----------
     mat : obj
@@ -150,12 +160,14 @@ def mat_to_laplacian(mat, normalized):
 
     """
     if sps.issparse(mat):
-        if np.all(mat.diagonal()>=0): # Check diagonal
-            if np.all((mat-sps.diags(mat.diagonal())).data <= 0): # Check off-diagonal elements
+        if np.all(mat.diagonal() >= 0):  # Check diagonal
+            if np.all(
+                (mat - sps.diags(mat.diagonal())).data <= 0
+            ):  # Check off-diagonal elements
                 return mat
     else:
-        if np.all(np.diag(mat)>=0): # Check diagonal
-            if np.all(mat - np.diag(mat) <= 0): # Check off-diagonal elements
+        if np.all(np.diag(mat) >= 0):  # Check diagonal
+            if np.all(mat - np.diag(mat) <= 0):  # Check off-diagonal elements
                 return mat
     deg = np.squeeze(np.asarray(mat.sum(axis=1)))
     if sps.issparse(mat):
@@ -164,9 +176,9 @@ def mat_to_laplacian(mat, normalized):
         L = np.diag(deg) - mat
     if not normalized:
         return L
-    with np.errstate(divide='ignore'):
+    with np.errstate(divide="ignore"):
         sqrt_deg = 1.0 / np.sqrt(deg)
-    sqrt_deg[sqrt_deg==np.inf] = 0
+    sqrt_deg[sqrt_deg == np.inf] = 0
     if sps.issparse(mat):
         sqrt_deg_mat = sps.diags(sqrt_deg)
     else:
@@ -174,10 +186,14 @@ def mat_to_laplacian(mat, normalized):
     return sqrt_deg_mat.dot(L).dot(sqrt_deg_mat)
 
 
-def updown_linear_approx(eigvals_lower, eigvals_upper, nv):
+def updown_linear_approx(
+    eigvals_lower: np.ndarray,
+    eigvals_upper: np.ndarray,
+    nv: int,
+) -> np.ndarray:
     """
     Approximates Laplacian spectrum using upper and lower parts of the eigenspectrum.
-    
+
     Parameters
     ----------
     eigvals_lower : numpy.ndarray
@@ -201,18 +217,27 @@ def updown_linear_approx(eigvals_lower, eigvals_upper, nv):
     nal = len(eigvals_lower)
     nau = len(eigvals_upper)
     if nv < nal + nau:
-        raise ValueError('Number of supplied eigenvalues ({0} lower and {1} upper) is higher than number of nodes ({2})!'.format(nal, nau, nv))
+        raise ValueError(
+            "Number of supplied eigenvalues ({0} lower and {1} upper) is higher than number of nodes ({2})!".format(
+                nal, nau, nv
+            )
+        )
     ret = np.zeros(nv)
     ret[:nal] = eigvals_lower
     ret[-nau:] = eigvals_upper
-    ret[nal-1:-nau+1] = np.linspace(eigvals_lower[-1], eigvals_upper[0], nv-nal-nau+2)
+    ret[nal - 1 : -nau + 1] = np.linspace(
+        eigvals_lower[-1], eigvals_upper[0], nv - nal - nau + 2
+    )
     return ret
 
 
-def eigenvalues_auto(mat, n_eivals='auto'):
+def eigenvalues_auto(
+    mat: Union[np.ndarray, sps.spmatrix],
+    n_eivals: Union[str, int, Tuple[int, int]] = "auto",
+) -> np.ndarray:
     """
     Automatically computes the spectrum of a given Laplacian matrix.
-    
+
     Parameters
     ----------
     mat : numpy.ndarray or scipy.sparse
@@ -238,10 +263,10 @@ def eigenvalues_auto(mat, n_eivals='auto'):
     n_lower = 150
     n_upper = 150
     nv = mat.shape[0]
-    if n_eivals == 'auto':
+    if n_eivals == "auto":
         if mat.shape[0] > 1024:
             do_full = False
-    if n_eivals == 'full':
+    if n_eivals == "full":
         do_full = True
     if isinstance(n_eivals, int):
         n_lower = n_upper = n_eivals
@@ -253,16 +278,20 @@ def eigenvalues_auto(mat, n_eivals='auto'):
         mat = mat.todense()
     if sps.issparse(mat):
         if n_lower == n_upper:
-            tr_eivals = spsl.eigsh(mat, 2*n_lower, which='BE', return_eigenvectors=False)
+            tr_eivals = spsl.eigsh(
+                mat, 2 * n_lower, which="BE", return_eigenvectors=False
+            )
             return updown_linear_approx(tr_eivals[:n_upper], tr_eivals[n_upper:], nv)
         else:
-            lo_eivals = spsl.eigsh(mat, n_lower, which='SM', return_eigenvectors=False)[::-1]
-            up_eivals = spsl.eigsh(mat, n_upper, which='LM', return_eigenvectors=False)
+            lo_eivals = spsl.eigsh(mat, n_lower, which="SM", return_eigenvectors=False)[
+                ::-1
+            ]
+            up_eivals = spsl.eigsh(mat, n_upper, which="LM", return_eigenvectors=False)
             return updown_linear_approx(lo_eivals, up_eivals, nv)
     else:
         if do_full:
             return spl.eigvalsh(mat)
         else:
-            lo_eivals = spl.eigvalsh(mat, eigvals=(0, n_lower-1))
-            up_eivals = spl.eigvalsh(mat, eigvals=(nv-n_upper-1, nv-1))
+            lo_eivals = spl.eigvalsh(mat, eigvals=(0, n_lower - 1))
+            up_eivals = spl.eigvalsh(mat, eigvals=(nv - n_upper - 1, nv - 1))
             return updown_linear_approx(lo_eivals, up_eivals, nv)
