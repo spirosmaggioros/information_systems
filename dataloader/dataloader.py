@@ -92,7 +92,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
 
     for idx, edge in enumerate(edges):
         u, v = edge
-        assert node_to_graph[u] == node_to_graph[v], "Nodes exist in multiple graphs"
+        assert node_to_graph[u] == node_to_graph[v], "Nodes existing in multiple graphs"
         graphs[node_to_graph[u] - 1].add_edge(u, v)
 
     for g in graphs:
