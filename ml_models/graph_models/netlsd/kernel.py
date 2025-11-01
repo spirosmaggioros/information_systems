@@ -2,7 +2,7 @@ from typing import Tuple, Union
 
 import numpy as np
 
-from .utils import (
+from ml_models.utils import (
     check_1d,
     check_2d,
     eigenvalues_auto,
