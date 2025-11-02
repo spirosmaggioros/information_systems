@@ -21,7 +21,7 @@ class Graph2Vec:
     :type down_sampling: float
     :param epochs: Number of epochs
     :type epochs: int
-    :param learning_rate: HogWild! learning rate
+    :param learning_rate: learning rate
     :type learning_rate: float
     :param min_count: Minimal count of graph feature occurrences
     :type min_count: int
