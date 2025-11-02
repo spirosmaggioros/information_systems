@@ -1,7 +1,3 @@
-"""
-Grid search trainer for Graph2Vec hyperparameter optimization.
-"""
-
 import itertools
 import time
 from typing import Any, Dict, List, Tuple
@@ -89,7 +85,7 @@ def grid_search_graph2vec(
 
         model = Graph2Vec(**params)
         model.fit(graphs)
-        embeddings = model.get_embedding()
+        embeddings = model.get_embeddings()
 
         training_time = time.time() - start_time
 
@@ -97,6 +93,8 @@ def grid_search_graph2vec(
             embeddings, labels, test_size=test_size, random_state=random_state
         )
 
+        # TODO: This shouldn't always be an SVC(classification), for now it's ok,
+        # but we should have an {ml_model} as a parameter that will be used here.
         clf = SVC(kernel="rbf", random_state=random_state)
         clf.fit(X_train, y_train)
 
@@ -108,6 +106,8 @@ def grid_search_graph2vec(
         cv_mean: float = float(cv_scores.mean())
         cv_std: float = float(cv_scores.std())
 
+        # TODO: Should add more metrics. Keep the best F1 score(not CV mean),
+        # never seen that before.
         result: Dict[str, Any] = {
             "params": params,
             "training_time": training_time,
@@ -198,12 +198,13 @@ def train_best_model(
 
     model = Graph2Vec(**best_params)
     model.fit(graphs)
-    embeddings = model.get_embedding()
+    embeddings = model.get_embeddings()
 
     X_train, X_test, y_train, y_test = train_test_split(
         embeddings, labels, test_size=test_size, random_state=random_state
     )
 
+    # TODO: The same as above.
     clf = SVC(kernel="rbf", random_state=random_state)
     clf.fit(X_train, y_train)
 
@@ -211,6 +212,7 @@ def train_best_model(
     accuracy: float = float(accuracy_score(y_test, y_pred))
     f1: float = float(f1_score(y_test, y_pred, average="macro"))
 
+    # TODO: The same as above
     metrics: Dict[str, float] = {
         "accuracy": accuracy,
         "f1": f1,

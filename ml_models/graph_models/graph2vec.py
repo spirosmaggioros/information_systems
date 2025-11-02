@@ -76,14 +76,14 @@ class Graph2Vec:
         """
         self.model.fit(graphs)
 
-    def get_embedding(self) -> np.ndarray:
+    def get_embeddings(self) -> np.ndarray:
         """
         Get the learned embeddings.
 
         :returns: Graph embeddings
         :rtype: np.ndarray
         """
-        return self.model.get_embedding()
+        return self.model.get_embeddings()
 
     def infer(self, graphs: List[nx.Graph]) -> np.ndarray:
         """
