@@ -73,7 +73,6 @@ def grid_search_graph2vec(
     print(f"[INFO] Cross-validation folds: {cv}")
     print("=" * 80)
 
-    # Generate all parameter combinations
     param_combinations = _generate_param_combinations(param_grid)
 
     print(f"[INFO] Total combinations to test: {len(param_combinations)}")
@@ -86,7 +85,6 @@ def grid_search_graph2vec(
     for idx, params in enumerate(param_combinations):
         print(f"\n[{idx + 1}/{len(param_combinations)}] Testing: {params}")
 
-        # Train Graph2Vec with current parameters
         start_time = time.time()
 
         model = Graph2Vec(**params)
@@ -95,26 +93,21 @@ def grid_search_graph2vec(
 
         training_time = time.time() - start_time
 
-        # Split data
         X_train, X_test, y_train, y_test = train_test_split(
             embeddings, labels, test_size=test_size, random_state=random_state
         )
 
-        # Train classifier
         clf = SVC(kernel="rbf", random_state=random_state)
         clf.fit(X_train, y_train)
 
-        # Evaluate
         y_pred = clf.predict(X_test)
         test_accuracy = accuracy_score(y_test, y_pred)
         test_f1 = f1_score(y_test, y_pred, average="macro")
 
-        # Cross-validation score
         cv_scores = cross_val_score(clf, embeddings, labels, cv=cv)
         cv_mean: float = float(cv_scores.mean())
         cv_std: float = float(cv_scores.std())
 
-        # Store results
         result: Dict[str, Any] = {
             "params": params,
             "training_time": training_time,
@@ -130,7 +123,6 @@ def grid_search_graph2vec(
         print(f"  Test F1: {test_f1:.4f}")
         print(f"  CV mean: {cv_mean:.4f} (+/- {cv_std:.4f})")
 
-        # Update best parameters
         if cv_mean > best_score:
             best_score = cv_mean
             best_params = params
@@ -204,21 +196,17 @@ def train_best_model(
     print("[INFO] Training final model with best parameters")
     print(f"[INFO] Parameters: {best_params}")
 
-    # Train Graph2Vec
     model = Graph2Vec(**best_params)
     model.fit(graphs)
     embeddings = model.get_embedding()
 
-    # Split data
     X_train, X_test, y_train, y_test = train_test_split(
         embeddings, labels, test_size=test_size, random_state=random_state
     )
 
-    # Train classifier
     clf = SVC(kernel="rbf", random_state=random_state)
     clf.fit(X_train, y_train)
 
-    # Evaluate
     y_pred = clf.predict(X_test)
     accuracy: float = float(accuracy_score(y_test, y_pred))
     f1: float = float(f1_score(y_test, y_pred, average="macro"))
