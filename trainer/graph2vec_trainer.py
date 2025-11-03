@@ -99,7 +99,9 @@ def train(
     _______
 
     model, metrics = train_best_model(
-        graphs, labels
+        graphs=graphs,
+        labels=labels,
+        num_classes=3,
     )
     print(f"Final accuracy: {metrics['Accuracy']:.4f}")
     print(f"Final F1: {metrics['F1']:.4f}")
