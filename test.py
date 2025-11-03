@@ -3,7 +3,7 @@ from trainer.graph2vec_trainer import train as graph2vec_train
 
 # from visualization.graph_visualizations import plot_graph
 
-data = ds_to_graphs("data/IMDB-MULTI")
+data = ds_to_graphs("data/MUTAG")
 
 param_grid = {
     "dimensions": [64, 128, 256],
@@ -12,7 +12,12 @@ param_grid = {
 }
 
 model, metrics = graph2vec_train(
-    data["graphs"], data["graph_classes"], classifier="MLP", num_classes=3, device="cpu"
+    data["graphs"],
+    data["graph_classes"],
+    classifier="MLP",
+    mode="binary",
+    num_classes=1,
+    device="cpu",
 )
 
 print(metrics)

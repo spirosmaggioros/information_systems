@@ -120,6 +120,8 @@ def compute_metrics(
     :type y_pred: list
     :param y_hat: Ground truth
     :type y_hat: list
+    :param y_preds_proba: Only for SVM models for multiclassification
+    :type y_preds_proba: list(default=[])
 
     :return: dictionary with F1, Accuracy and AUC scores
     """

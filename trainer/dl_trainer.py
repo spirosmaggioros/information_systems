@@ -187,7 +187,7 @@ def train(
     optimizer: torch.optim,
     mode: str,
     num_classes: Optional[int] = None,
-    epochs: int = 100,
+    epochs: int = 200,
     patience: int = 10,
     device: str = "cuda",
     target_dir: str = ".",
