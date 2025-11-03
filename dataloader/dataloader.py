@@ -1,5 +1,6 @@
 import os
 import re
+from typing import List
 
 import networkx as nx
 from torch_geometric.data import Data
@@ -68,7 +69,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                 for i, line in enumerate(f):
                     line = line.strip()
                     attr = [float(x) for x in re.split("[,]", line)]
-                    node_attributes[i] = attr
+                    node_attributes[(i + 1)] = attr
 
         if "_node_labels.txt" in file:
             with open(file_path, "r") as f:
@@ -86,6 +87,9 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     for g in graphs:
         nx.set_node_attributes(g, node_attributes, name="node_attributes")
 
+    for i, graph in enumerate(graphs):
+        graphs[i] = nx.convert_node_labels_to_integers(graph, first_label=0)
+
     return {
         "graphs": graphs,
         "graph_classes": graph_classes,
@@ -96,7 +100,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     }
 
 
-def nx_to_torch_data(data: list[nx.Graph]) -> list[Data]:
+def nx_to_torch_data(data: list[nx.Graph]) -> List[Data]:
     """
     Transforms a list of nx.Graph to a list of torch_geometric.data.Data for GNN training
     :param data: the input list of graphs

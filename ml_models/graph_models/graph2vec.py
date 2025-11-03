@@ -83,7 +83,7 @@ class Graph2Vec:
         :returns: Graph embeddings
         :rtype: np.ndarray
         """
-        return self.model.get_embeddings()
+        return self.model.get_embedding()
 
     def infer(self, graphs: List[nx.Graph]) -> np.ndarray:
         """

@@ -1,6 +1,10 @@
+import logging
+import os
 from pathlib import Path
+from typing import Any
 
 import torch
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 
 
 class EarlyStopper:
@@ -65,3 +69,62 @@ def load_torch_model(model: torch.nn.Module, model_weights: str, device: str) ->
         print(f"Warning: Missing keys in model: {missing_keys}")
     if expected_keys:
         print(f"Warning: Unexpected keys in model: {expected_keys}")
+
+
+def logging_basic_config(
+    verbose: int = 1, content_only: bool = False, filename: str = ""
+) -> Any:
+    """
+    Basic logging configuration for error exceptions
+
+    :param verbose: input verbose. Default value = 1
+    :type verbose: int
+    :param content_only: If set to True it will output only the needed content. Default value = False
+    :type content_only: bool
+    :param filename: input filename. Default value = ''
+    :type filename: str
+
+    """
+    logging_level = {
+        0: logging.WARNING,
+        1: logging.INFO,
+        2: logging.DEBUG,
+        3: logging.ERROR,
+        4: logging.CRITICAL,
+    }
+    fmt = (
+        " %(message)s" if content_only else "%(levelname)s (%(funcName)s): %(message)s"
+    )
+    if filename != "" and filename is not None:
+        if not os.path.exists(filename):
+            dirname, _ = os.path.split(filename)
+            if dirname != "":
+                os.mkdir(dirname)
+        logging.basicConfig(
+            level=logging_level[verbose], format=fmt, force=True, filename=filename
+        )
+    else:
+        logging.basicConfig(level=logging_level[verbose], format=fmt, force=True)
+    return logging.getLogger()
+
+
+def compute_metrics(
+    y_preds: list,
+    y_hat: list,
+    y_preds_proba: list = [],
+) -> dict:
+    """
+    Return needed metrics for classification
+
+    :param y_pred: The model predictions
+    :type y_pred: list
+    :param y_hat: Ground truth
+    :type y_hat: list
+
+    :return: dictionary with F1, Accuracy and AUC scores
+    """
+    return {
+        "F1": f1_score(y_hat, y_preds, average="macro"),
+        "Accuracy": accuracy_score(y_hat, y_preds),
+        "AUC": roc_auc_score(y_hat, y_preds_proba, multi_class="ovr"),
+    }

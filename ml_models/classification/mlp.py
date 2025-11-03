@@ -20,7 +20,7 @@ class MLPDataset(Dataset):
 
     def __init__(self, X: list, y: list) -> None:
         self.X = np.array(X, dtype=np.float32)
-        self.y = np.array(y, dtype=np.float32)
+        self.y = np.array(y, dtype=np.int64)
 
     def __len__(self) -> int:
         return len(self.y)
@@ -28,7 +28,7 @@ class MLPDataset(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         return torch.tensor(self.X[idx], dtype=torch.float32), torch.tensor(
             self.y[idx],
-            dtype=torch.float32,
+            dtype=torch.long,
         )
 
 
@@ -40,7 +40,7 @@ class MLP(nn.Module):
         dropout: float = 0.2,
         use_bn: bool = False,
         bn: str = "bn",
-        device: str = "cuda",
+        device: str = "mps",
         init_input: int = -1,
     ) -> None:
         """
@@ -77,6 +77,7 @@ class MLP(nn.Module):
 
         self.model = nn.Sequential(
             mlp_layer(self.hidden_size),
+            mlp_layer(self.hidden_size // 2),
             mlp_layer(self.hidden_size // 2),
             nn.LazyLinear(num_classes),
         ).to(device)
