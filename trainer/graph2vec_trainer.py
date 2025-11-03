@@ -19,6 +19,7 @@ def train_complete_classifier(
     y_train: list,
     y_test: list,
     num_classes: int,
+    mode: str,
     classifier: str = "SVC",
     device: str = "mps",
     save_model: bool = False,
@@ -29,7 +30,7 @@ def train_complete_classifier(
     clf = None
     metrics = {"AUROC": 0.0, "F1": 0.0, "Accuracy": 0.0}
     if classifier == "SVC":
-        clf, stats = train_svm(X_train, y_train)
+        clf, stats = train_svm(mode=mode, graph_embeddings=X_train, labels=y_train)
         metrics["AUROC"] = stats["AUC"]
         metrics["F1"] = stats["F1"]
         metrics["Accuracy"] = stats["Accuracy"]
@@ -47,7 +48,10 @@ def train_complete_classifier(
             device=device,
             init_input=len(X_train[0]),
         )
-        loss = nn.CrossEntropyLoss()
+        if mode == "binary":
+            loss = nn.BCEWithLogitsLoss()
+        else:
+            loss = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(
             clf.parameters(),
             lr=0.001,
@@ -62,7 +66,7 @@ def train_complete_classifier(
             num_classes=num_classes,
             loss_fn=loss,
             optimizer=optimizer,
-            mode="multiclass",
+            mode=mode,
             device=device,
             save_model=save_model,
         )
@@ -78,6 +82,7 @@ def train(
     graphs: List[nx.Graph],
     labels: List[int],
     num_classes: int,
+    mode: str,
     test_size: float = 0.25,
     classifier: str = "SVC",
     device: str = "mps",
@@ -136,6 +141,7 @@ def train(
             y_test=y_test,
             num_classes=num_classes,
             classifier=classifier,
+            mode=mode,
             device=device,
             save_model=False,
         )
@@ -176,6 +182,7 @@ def train(
         y_test=y_test,
         num_classes=num_classes,
         classifier=classifier,
+        mode=mode,
         device=device,
         save_model=True,
     )

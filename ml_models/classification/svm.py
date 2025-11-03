@@ -7,6 +7,7 @@ class SVMModel:
 
     def __init__(
         self,
+        mode: str,
         C: float = 0.1,
         kernel: str = "rbf",
         max_iter: int = 10000,
@@ -25,23 +26,32 @@ class SVMModel:
         self.kernel = kernel
         self.max_iter = max_iter
 
-        self.model = (
-            SVC(
-                max_iter=max_iter,
-                kernel="linear",
-                gamma="auto",
-                decision_function_shape="ovr",
-                probability=True,
-            )
-            if self.kernel == "linear"
-            else SVC(
-                max_iter=max_iter,
-                kernel=self.kernel,
-                gamma="auto",
-                decision_function_shape="ovr",
-                probability=True,
-            )
-        )
+        if self.kernel == "linear":
+            if mode == "multiclass":
+                self.model = SVC(
+                    max_iter=max_iter,
+                    kernel="linear",
+                    gamma="auto",
+                    decision_function_shape="ovr",
+                    probability=True,
+                )
+            else:
+                self.model = SVC(
+                    max_iter=max_iter,
+                    kernel="linear",
+                    gamma="auto",
+                )
+        else:
+            if mode == "multiclass":
+                self.model = SVC(
+                    max_iter=max_iter,
+                    kernel=self.kernel,
+                    gamma="auto",
+                    decision_function_shape="ovr",
+                    probability=True,
+                )
+            else:
+                self.model = SVC(max_iter=max_iter, kernel=self.kernel, gamma="auto")
 
     def fit(self, X: list, y: list) -> None:
         """

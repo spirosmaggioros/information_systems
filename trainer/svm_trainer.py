@@ -12,6 +12,7 @@ LOGGING_FILENAME = "svc_trainer.log"
 def train(
     graph_embeddings: list,
     labels: list,
+    mode: str,
 ) -> Any:
     """
     SVC trainer
@@ -35,6 +36,7 @@ def train(
         kernel = trial.suggest_categorical("kernel", ["rbf", "linear"])
         svc_c = trial.suggest_float("C", 1e-10, 1e10, log=True)
         model = SVMModel(
+            mode=mode,
             C=svc_c,
             kernel=kernel,
         )
@@ -64,6 +66,7 @@ def train(
     best_checkpoint = best_trial.user_attrs["checkpoint"]
     best_hyperparams = best_checkpoint["trial_params"]
     best_model = SVMModel(
+        mode=mode,
         C=best_hyperparams["C"],
         kernel=best_hyperparams["kernel"],
     )
