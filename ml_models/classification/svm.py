@@ -1,11 +1,6 @@
 from typing import Any, List
 
-import numpy as np
 from sklearn.svm import SVC
-
-
-def expspace(span: list) -> np.ndarray:
-    return np.exp(np.linspace(span[0], span[1], num=int(span[1]) - int(span[0]) + 1))
 
 
 class SVMModel:
