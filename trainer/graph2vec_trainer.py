@@ -23,6 +23,9 @@ def train_complete_classifier(
     device: str = "mps",
     save_model: bool = False,
 ) -> dict:
+    """
+    Trains the passed classifier on graph embeddings computed by a graph model
+    """
     clf = None
     metrics = {"AUROC": 0.0, "F1": 0.0, "Accuracy": 0.0}
     if classifier == "SVC":
