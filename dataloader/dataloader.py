@@ -35,6 +35,9 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     node_labels: list = []
     node_attributes: dict = {}
     edges: list = []
+    edge_labels: list = []
+    is_multigraph = False
+    seen_edges = set()
 
     for file in os.listdir(dataset_folder):
         file_path = os.path.join(dataset_folder, file)
@@ -46,7 +49,11 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     if line:
                         parts = line.split(",")
                         if len(parts) == 2:
-                            edges.append((int(parts[0].strip()), int(parts[1].strip())))
+                            edge = (int(parts[0].strip()), int(parts[1].strip()))
+                            edges.append(edge)
+                        if edge in seen_edges:
+                            is_multigraph = True
+                        seen_edges.add(edge)
 
         if "_graph_labels.txt" in file:
             with open(file_path, "r") as f:
@@ -78,7 +85,20 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     if line:
                         node_labels.append(int(line))
 
-    graphs = [nx.Graph() for _ in range(no_graphs)]
+        if "_edge_labels.txt" in file:
+            with open(file_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        edge_labels.append(int(line))
+
+    if is_multigraph:
+        graphs = [nx.MultiGraph() for _ in range(no_graphs)]
+    else:
+        graphs = [nx.Graph() for _ in range(no_graphs)]
+
+    has_edge_labels = len(edge_labels) > 0
+
     for edge in edges:
         u, v = edge
         assert node_to_graph[u] == node_to_graph[v], "Nodes existing in multiple graphs"
@@ -86,6 +106,11 @@ def ds_to_graphs(dataset_folder: str) -> dict:
 
     for g in graphs:
         nx.set_node_attributes(g, node_attributes, name="node_attributes")
+
+    if has_edge_labels:
+        edge_attr_dict = {edges[i]: edge_labels[i] for i in range(len(edge_labels))}
+        for g in graphs:
+            nx.set_edge_attributes(g, edge_attr_dict, name="edge_label")
 
     for i, graph in enumerate(graphs):
         graphs[i] = nx.convert_node_labels_to_integers(graph, first_label=0)
@@ -97,6 +122,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
         "node_attributes": node_attributes,
         "node_to_graph": node_to_graph,
         "edges": edges,
+        "edge_labels": edge_labels,
     }
 
 
