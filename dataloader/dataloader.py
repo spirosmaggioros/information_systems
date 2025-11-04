@@ -42,7 +42,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     for file in os.listdir(dataset_folder):
         file_path = os.path.join(dataset_folder, file)
 
-        if "_A.txt" in file:        
+        if "_A.txt" in file:
             with open(file_path, "r") as f:
                 for line in f:
                     line = line.strip()
