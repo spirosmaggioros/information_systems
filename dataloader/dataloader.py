@@ -36,18 +36,24 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     node_attributes: dict = {}
     edges: list = []
     edge_labels: list = []
+    is_multigraph = False
+    seen_edges = set()
 
     for file in os.listdir(dataset_folder):
         file_path = os.path.join(dataset_folder, file)
 
-        if "_A.txt" in file:
+        if "_A.txt" in file:        
             with open(file_path, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line:
                         parts = line.split(",")
                         if len(parts) == 2:
-                            edges.append((int(parts[0].strip()), int(parts[1].strip())))
+                            edge = (int(parts[0].strip()), int(parts[1].strip()))
+                            edges.append(edge)
+                        if edge in seen_edges:
+                            is_multigraph = True
+                        seen_edges.add(edge)
 
         if "_graph_labels.txt" in file:
             with open(file_path, "r") as f:
@@ -86,7 +92,10 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     if line:
                         edge_labels.append(int(line))
 
-    graphs = [nx.Graph() for _ in range(no_graphs)]
+    if is_multigraph:
+        graphs = [nx.MultiGraph() for _ in range(no_graphs)]
+    else:
+        graphs = [nx.Graph() for _ in range(no_graphs)]
 
     has_edge_labels = len(edge_labels) > 0
 
