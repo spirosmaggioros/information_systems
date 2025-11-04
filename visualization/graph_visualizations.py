@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import networkx as nx

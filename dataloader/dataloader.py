@@ -78,7 +78,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     line = line.strip()
                     if line:
                         node_labels.append(int(line))
-            
+
         if "_edge_labels.txt" in file:
             with open(file_path, "r") as f:
                 for line in f:
