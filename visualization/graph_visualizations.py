@@ -31,7 +31,7 @@ def plot_graph(graph: nx.Graph, node_labels: list = []) -> None:
     pos = nx.spring_layout(graph, seed=42)
 
     if node_labels:
-        curr_node_labels = [node_labels[n - 1] for n in nodes]
+        curr_node_labels = [node_labels[n] for n in nodes]
         unique_labels = sorted(set(curr_node_labels))
         color_map = cm.get_cmap("tab10", len(unique_labels))
         label_to_color = {lbl: color_map(i) for i, lbl in enumerate(unique_labels)}

@@ -98,13 +98,13 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     for g in graphs:
         nx.set_node_attributes(g, node_attributes, name="node_attributes")
 
-    for i, graph in enumerate(graphs):
-        graphs[i] = nx.convert_node_labels_to_integers(graph, first_label=0)
-
     if has_edge_labels:
         edge_attr_dict = {edges[i]: edge_labels[i] for i in range(len(edge_labels))}
         for g in graphs:
             nx.set_edge_attributes(g, edge_attr_dict, name="edge_label")
+
+    for i, graph in enumerate(graphs):
+        graphs[i] = nx.convert_node_labels_to_integers(graph, first_label=0)
 
     return {
         "graphs": graphs,
