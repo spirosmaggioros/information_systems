@@ -1,10 +1,11 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 import torch
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+import numpy as np
 
 
 class EarlyStopper:
@@ -111,6 +112,7 @@ def logging_basic_config(
 def compute_metrics(
     y_preds: list,
     y_hat: list,
+    mode: str,
     y_preds_proba: list = [],
 ) -> dict:
     """
@@ -125,8 +127,37 @@ def compute_metrics(
 
     :return: dictionary with F1, Accuracy and AUC scores
     """
+    auc = 0.0
+    if mode == "binary":
+        auc = roc_auc_score(y_hat, y_preds_proba[:, 1])
+    else:
+        auc = roc_auc_score(y_hat, y_preds_proba, multi_class="ovr")
     return {
         "F1": f1_score(y_hat, y_preds, average="macro"),
         "Accuracy": accuracy_score(y_hat, y_preds),
-        "AUC": roc_auc_score(y_hat, y_preds_proba, multi_class="ovr"),
+        "AUC": auc,
     }
+
+
+def convert_embeddings_to_real(embeddings_raw: List[np.ndarray]) -> List[np.ndarray]:
+    """
+    Converts a list of embeddings to real-valued arrays.
+
+    If an embedding is complex (from NetLSD 'wave' kernel), it concatenates
+    its real and imaginary parts. Otherwise, it returns the embedding as is
+
+    :param embeddings_raw: The list of raw embeddings.
+    :type embeddings_raw: List[np.ndarray]
+    :return: A list of real-valued embeddings.
+    :rtype: List[np.ndarray]
+    """
+    processed_embeddings = []
+    for emb in embeddings_raw:
+        if np.iscomplexobj(emb):
+            # Concatenate real and imaginary parts (e.g., [1+2j, 3+4j] -> [1, 3, 2, 4])
+            processed_embeddings.append(np.concatenate((emb.real, emb.imag)))
+        else:
+            # Embedding is already real
+            processed_embeddings.append(emb)
+    
+    return processed_embeddings

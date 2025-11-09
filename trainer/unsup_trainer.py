@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Tuple, Union
+import ast
 
 import networkx as nx
 import numpy as np
@@ -13,6 +14,7 @@ from ml_models.graph_models.graph2vec import Graph2Vec
 from ml_models.graph_models.netLSD import NetLSD
 from trainer.dl_trainer import train as train_dl
 from trainer.svm_trainer import train as train_svm
+from trainer.utils import convert_embeddings_to_real
 
 
 def train_complete_classifier(
@@ -152,10 +154,19 @@ def train(
                 max_t = trial.suggest_float("max_t", np.pi, 2 * np.pi)
                 timescales = np.linspace(0, max_t, num_timescales)
 
-            eigenvalues = trial.suggest_categorical(
+            eigenvalues_choice = trial.suggest_categorical(
                 "eigenvalues",
-                ["auto", "full", 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 18, 20, 28, 32, 40, 50, 64, 80, 100, (2, 4), (4, 2), (6, 2), (2, 6), (8, 4), (4, 8), (10, 20), (20, 10), (32, 4), (4, 32), (10, 50), (50, 10)]
+                ["auto", "full", 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 18, 20, 28, 32, 40, 50, 64, 80, 100, 
+                "(2, 4)", "(4, 2)", "(6, 2)", "(2, 6)", "(8, 4)", "(4, 8)", "(10, 20)", "(20, 10)", 
+                "(32, 4)", "(4, 32)", "(10, 50)", "(50, 10)"]
             )
+            
+            eigenvalues_param: Union[str, int, Tuple[int, int]]
+            if isinstance(eigenvalues_choice, str) and eigenvalues_choice.startswith("("):
+                eigenvalues_param = ast.literal_eval(eigenvalues_choice)
+            else:
+                eigenvalues_param = eigenvalues_choice
+
             normalization = trial.suggest_categorical(
                 "normalization", ["empty", "complete", None]
             )
@@ -166,19 +177,20 @@ def train(
             model_netlsd = NetLSD(
                 timescales=timescales,
                 kernel=kernel,
-                eigenvalues=eigenvalues,
+                eigenvalues=eigenvalues_param,
                 normalization=normalization,
                 normalized_laplacian=normalized_laplacian,
             )
 
             try:
-                embeddings = [model_netlsd.fit_transform(g) for g in graphs]
+                embeddings_raw = [model_netlsd.fit_transform(g) for g in graphs]
+                embeddings = convert_embeddings_to_real(embeddings_raw)
             except Exception as e:
                 trial.set_user_attr("Failed due to wrong hyperparameters", str(e))
                 return float("-inf")
 
         X_train, X_test, y_train, y_test = train_test_split(
-            embeddings, labels, test_size=test_size, random_state=42
+            embeddings, labels, test_size=test_size, random_state=42, stratify=labels,
         )
 
         metrics = train_complete_classifier(
@@ -220,14 +232,22 @@ def train(
         embeddings = best_model_g2v.get_embeddings()
         best_model = best_model_g2v
     else:
+        eigenvalues_choice = best_hyperparams["eigenvalues"]
+        eigenvalues_param: Union[str, int, Tuple[int, int]]
+        if isinstance(eigenvalues_choice, str) and eigenvalues_choice.startswith("("):
+            eigenvalues_param = ast.literal_eval(eigenvalues_choice)
+        else:
+            eigenvalues_param = eigenvalues_choice
+    
         best_model_netlsd = NetLSD(
             timescales=best_hyperparams["timescales"],
             kernel=best_hyperparams["kernel"],
-            eigenvalues=best_hyperparams["eigenvalues"],
+            eigenvalues=eigenvalues_param,
             normalization=best_hyperparams["normalization"],
             normalized_laplacian=best_hyperparams["normalized_laplacian"],
         )
-        embeddings = [best_model_netlsd.fit_transform(g) for g in graphs]
+        embeddings_raw = [best_model_netlsd.fit_transform(g) for g in graphs]
+        embeddings = convert_embeddings_to_real(embeddings_raw)
         best_model = best_model_netlsd
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -235,6 +255,7 @@ def train(
         labels,
         test_size=test_size,
         random_state=42,
+        stratify=labels,
     )
 
     metrics = train_complete_classifier(
