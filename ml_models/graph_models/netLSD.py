@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -41,7 +41,7 @@ class NetLSD:
         self,
         timescales: np.ndarray = np.logspace(-2, 2, 250),
         kernel: str = "heat",
-        eigenvalues: Union[str, int, tuple] = "auto",
+        eigenvalues: Union[str, int, Tuple[int, int]] = "auto",
         normalization: Union[str, np.ndarray, None] = "empty",
         normalized_laplacian: bool = True,
     ) -> None:
@@ -62,7 +62,7 @@ class NetLSD:
         :returns: NetLSD distance
         :rtype: float
         """
-        return np.linalg.norm(descriptor1 - descriptor2)
+        return float(np.linalg.norm(descriptor1 - descriptor2))
 
     def fit_transform(self, inp: Union[nx.Graph, np.ndarray]) -> np.ndarray:
         """
@@ -120,10 +120,10 @@ class NetLSD:
 
     def _netlsd(
         self,
-        inp,
+        inp: Union[nx.Graph, np.ndarray],
         timescales: np.ndarray,
         kernel: str,
-        eigenvalues: Union[str, int, tuple],
+        eigenvalues: Union[str, int, Tuple[int, int]],
         normalization: Union[str, np.ndarray, None],
         normalized_laplacian: bool,
     ) -> np.ndarray:
@@ -146,23 +146,53 @@ class NetLSD:
         :rtype: np.ndarray
         """
         if kernel not in {"heat", "wave"}:
-            raise AttributeError(f"Unrecognized kernel type: {kernel}")
+            raise AttributeError(
+                "Unirecognized kernel type: expected one of ['heat', 'wave'], got {0}".format(
+                    kernel
+                )
+            )
         if not isinstance(normalized_laplacian, bool):
             raise AttributeError(
-                f"Unknown Laplacian type: {type(normalized_laplacian)}"
+                "Unknown Laplacian type: expected bool, got {0}".format(
+                    normalized_laplacian
+                )
             )
         if not isinstance(eigenvalues, (int, tuple, str)):
-            raise AttributeError(f"Unrecognized eigenvalues type: {type(eigenvalues)}")
-        if not isinstance(timescales, np.ndarray) or timescales.ndim != 1:
-            raise AttributeError("Timescales must be a 1D numpy array")
-        if normalization not in {"complete", "empty", "none", True, False, None}:
-            if not isinstance(normalization, np.ndarray) or normalization.ndim != 1:
-                raise AttributeError(
-                    'Normalization must be "complete", "empty", None, or a 1D numpy array'
+            raise AttributeError(
+                "Unirecognized requested eigenvalue number: expected type of ['str', 'tuple', or 'int'], got {0}".format(
+                    type(eigenvalues)
                 )
-            if normalization.shape[0] != timescales.shape[0]:
+            )
+        if not isinstance(timescales, np.ndarray):
+            raise AttributeError(
+                "Unirecognized timescales data type: expected np.ndarray, got {0}".format(
+                    type(timescales)
+                )
+            )
+        if timescales.ndim != 1:
+            raise AttributeError(
+                "Unirecognized timescales dimensionality: expected a vector, got {0}-d array".format(
+                    timescales.ndim
+                )
+            )
+        if normalization not in {"complete", "empty", "none", True, False, None}:
+            if not isinstance(normalization, np.ndarray):
                 raise AttributeError(
-                    "Normalization vector length must match timescales length"
+                    "Unirecognized normalization type: expected one of ['complete', 'empty', None or np.ndarray], got {0}".format(
+                        normalization
+                    )
+                )
+            if normalization.ndim != 1:
+                raise AttributeError(
+                    "Unirecognized normalization dimensionality: expected a vector, got {0}-d array".format(
+                        normalization.ndim
+                    )
+                )
+            if timescales.shape[0] != normalization.shape[0]:
+                raise AttributeError(
+                    "Unirecognized normalization dimensionality: expected {0}-length vector, got length {1}".format(
+                        timescales.shape[0], normalization.shape[0]
+                    )
                 )
 
         eivals = check_1d(inp)
@@ -171,17 +201,26 @@ class NetLSD:
             if mat is None:
                 mat = graph_to_laplacian(inp, normalized_laplacian)
                 if mat is None:
-                    raise ValueError(f"Unrecognized input type: {type(inp)}")
+                    raise ValueError(
+                        "Unirecognized input type: expected one of ['np.ndarray', 'scipy.sparse', 'networkx.Graph',' graph_tool.Graph,' or 'igraph.Graph'], got {0}".format(
+                            type(inp)
+                        )
+                    )
             else:
                 mat = mat_to_laplacian(inp, normalized_laplacian)
             eivals = eigenvalues_auto(mat, eigenvalues)
-
         if kernel == "heat":
             return self._hkt(eivals, timescales, normalization, normalized_laplacian)
         else:
             return self._wkt(eivals, timescales, normalization, normalized_laplacian)
 
-    def _hkt(self, eivals, timescales, normalization, normalized_laplacian):
+    def _hkt(
+        self,
+        eivals: np.ndarray,
+        timescales: np.ndarray,
+        normalization: Union[str, np.ndarray, None],
+        normalized_laplacian: bool,
+    ) -> np.ndarray:
         """
         Compute heat kernel trace from eigenvalues.
 
@@ -211,7 +250,13 @@ class NetLSD:
                 return hkt / (1 + nv * np.exp(-nv * timescales))
         return hkt
 
-    def _wkt(self, eivals, timescales, normalization, normalized_laplacian):
+    def _wkt(
+        self,
+        eivals: np.ndarray,
+        timescales: np.ndarray,
+        normalization: Union[str, np.ndarray, None],
+        normalized_laplacian: bool,
+    ) -> np.ndarray:
         """
         Compute wave kernel trace from eigenvalues.
 

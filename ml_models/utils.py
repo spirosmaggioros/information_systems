@@ -1,3 +1,5 @@
+from typing import Optional, Tuple, Union
+
 import numpy as np
 import scipy.linalg as spl
 import scipy.sparse as sps
@@ -21,7 +23,7 @@ def init_weights(net: nn.Module) -> None:
                     nn.init.constant_(weight, 0.0)
 
 
-def check_1d(inp):
+def check_1d(inp: object) -> Optional[np.ndarray]:
     """
     Check that input is a 1D vector. Converts lists to np.ndarray.
 
@@ -35,9 +37,10 @@ def check_1d(inp):
     if isinstance(inp, np.ndarray):
         if inp.ndim == 1:
             return inp
+    return None
 
 
-def check_2d(inp):
+def check_2d(inp: object) -> Optional[Union[np.ndarray, sps.spmatrix]]:
     """
     Check that input is a 2D matrix. Converts lists of lists to np.ndarray.
 
@@ -54,9 +57,12 @@ def check_2d(inp):
     if sps.issparse(inp):
         if inp.ndim == 2:
             return inp
+    return None
 
 
-def graph_to_laplacian(G, normalized=True):
+def graph_to_laplacian(
+    G: object, normalized: bool = True
+) -> Optional[Union[np.ndarray, sps.spmatrix]]:
     """
     Convert a graph from popular Python packages to a Laplacian matrix.
 
@@ -80,7 +86,7 @@ def graph_to_laplacian(G, normalized=True):
     except ImportError:
         pass
     try:
-        import graph_tool.all as gt  # type: ignore
+        import graph_tool.all as gt
 
         if isinstance(G, gt.Graph):
             if normalized:
@@ -90,7 +96,7 @@ def graph_to_laplacian(G, normalized=True):
     except ImportError:
         pass
     try:
-        import igraph as ig  # type: ignore
+        import igraph as ig
 
         if isinstance(G, ig.Graph):
             if normalized:
@@ -99,9 +105,12 @@ def graph_to_laplacian(G, normalized=True):
                 return np.array(G.laplacian())
     except ImportError:
         pass
+    return None
 
 
-def mat_to_laplacian(mat, normalized):
+def mat_to_laplacian(
+    mat: Union[np.ndarray, sps.spmatrix], normalized: bool
+) -> Union[np.ndarray, sps.spmatrix]:
     """
     Convert an adjacency matrix to a Laplacian matrix.
 
@@ -139,7 +148,9 @@ def mat_to_laplacian(mat, normalized):
     return sqrt_deg_mat.dot(L).dot(sqrt_deg_mat)
 
 
-def updown_linear_approx(eigvals_lower, eigvals_upper, nv):
+def updown_linear_approx(
+    eigvals_lower: np.ndarray, eigvals_upper: np.ndarray, nv: int
+) -> np.ndarray:
     """
     Approximate Laplacian spectrum using lower and upper parts of eigenvalues.
 
@@ -167,7 +178,10 @@ def updown_linear_approx(eigvals_lower, eigvals_upper, nv):
     return ret
 
 
-def eigenvalues_auto(mat, n_eivals="auto"):
+def eigenvalues_auto(
+    mat: Union[np.ndarray, sps.spmatrix],
+    n_eivals: Union[str, int, Tuple[int, int]] = "auto",
+) -> np.ndarray:
     """
     Automatically compute eigenvalues of a Laplacian matrix with approximation.
 
