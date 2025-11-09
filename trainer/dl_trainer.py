@@ -19,6 +19,7 @@ from trainer.utils import EarlyStopper, logging_basic_config, save_torch_model
 
 def train_step(
     model: nn.Module,
+    model_type: str,
     dataloader: DataLoader,
     loss_fn: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -60,35 +61,63 @@ def train_step(
         specificity = Specificity(task=mode).to(device)
         f1_score = F1Score(task=mode).to(device)
 
-    for X, y in dataloader:
-        X, y = X.to(device), y.to(device)
+    if model_type == "torch":
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
 
-        if mode != "multiclass":
-            X, y = X.float(), y.float()
-        else:
-            X, y = X.float(), y.long()
+            if mode != "multiclass":
+                X, y = X.float(), y.float()
+            else:
+                X, y = X.float(), y.long()
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        y_pred = model(X)
+            y_pred = model(X)
 
-        loss = loss_fn(y_pred, y)
-        loss.backward()
+            loss = loss_fn(y_pred, y)
+            loss.backward()
 
-        optimizer.step()
+            optimizer.step()
 
-        y_pred_classes = (
-            (torch.sigmoid(y_pred) > 0.5).float()
-            if mode == "binary"
-            else torch.argmax(y_pred, dim=1)
-        )
+            y_pred_classes = (
+                (torch.sigmoid(y_pred) > 0.5).float()
+                if mode == "binary"
+                else torch.argmax(y_pred, dim=1)
+            )
 
-        acc.update(y_pred_classes, y)
-        auc.update(y_pred, y)
-        recall.update(y_pred_classes, y)
-        precision.update(y_pred_classes, y)
-        specificity.update(y_pred_classes, y)
-        f1_score.update(y_pred_classes, y)
+            acc.update(y_pred_classes, y)
+            auc.update(y_pred, y)
+            recall.update(y_pred_classes, y)
+            precision.update(y_pred_classes, y)
+            specificity.update(y_pred_classes, y)
+            f1_score.update(y_pred_classes, y)
+    else:
+        for batch in dataloader:
+            batch = batch.to(device)
+
+            optimizer.zero_grad()
+
+            y_pred = model(
+                x=batch.node_attributes, edge_index=batch.edge_index, batch=batch.batch
+            )
+            loss = loss_fn(y_pred, batch.y)
+
+            loss.backward()
+
+            optimizer.step()
+
+            y_pred_classes = (
+                (torch.sigmoid(y_pred) > 0.5).float()
+                if mode == "binary"
+                else torch.argmax(y_pred, dim=1)
+            )
+
+            acc.update(y_pred_classes, batch.y)
+            auc.update(y_pred, batch.y)
+            recall.update(y_pred_classes, batch.y)
+            precision.update(y_pred_classes, batch.y)
+            specificity.update(y_pred_classes, batch.y)
+            f1_score.update(y_pred_classes, batch.y)
 
     stats["train_acc"] = acc.compute().item()
     stats["train_auc"] = auc.compute().item()
@@ -102,6 +131,7 @@ def train_step(
 
 def test_step(
     model: torch.nn.Module,
+    model_type: str,
     dataloader: DataLoader,
     mode: str,
     num_classes: Optional[int] = None,
@@ -145,29 +175,54 @@ def test_step(
         confmat = ConfusionMatrix(task=mode).to(device)
 
     with torch.no_grad():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
+        if model_type == "torch":
+            for X, y in dataloader:
+                X, y = X.to(device), y.to(device)
 
-            if mode != "multiclass":
-                X, y = X.float(), y.float()
-            else:
-                X, y = X.float(), y.long()
+                if mode != "multiclass":
+                    X, y = X.float(), y.float()
+                else:
+                    X, y = X.float(), y.long()
 
-            test_pred = model(X)
+                test_pred = model(X)
 
-            y_pred_classes = (
-                (torch.sigmoid(test_pred) > 0.5).float()
-                if mode == "binary"
-                else torch.argmax(test_pred, dim=1)
-            )
+                y_pred_classes = (
+                    (torch.sigmoid(test_pred) > 0.5).float()
+                    if mode == "binary"
+                    else torch.argmax(test_pred, dim=1)
+                )
 
-            acc.update(y_pred_classes, y)
-            auc.update(test_pred, y)
-            recall.update(y_pred_classes, y)
-            precision.update(y_pred_classes, y)
-            specificity.update(y_pred_classes, y)
-            f1_score.update(y_pred_classes, y)
-            confmat.update(y_pred_classes, y)
+                acc.update(y_pred_classes, y)
+                auc.update(test_pred, y)
+                recall.update(y_pred_classes, y)
+                precision.update(y_pred_classes, y)
+                specificity.update(y_pred_classes, y)
+                f1_score.update(y_pred_classes, y)
+                confmat.update(y_pred_classes, y)
+        else:
+            for batch in dataloader:
+                batch = batch.to(device)
+
+                test_pred = model(
+                    x=batch.node_attributes,
+                    edge_index=batch.edge_index,
+                    batch=batch.batch,
+                )
+
+                y_pred_classes = (
+                    (torch.sigmoid(test_pred) > 0.5).float()
+                    if mode == "binary"
+                    else torch.argmax(test_pred, dim=1)
+                )
+
+                acc.update(y_pred_classes, batch.y)
+                auc.update(test_pred, batch.y)
+                recall.update(y_pred_classes, batch.y)
+                precision.update(y_pred_classes, batch.y)
+                specificity.update(y_pred_classes, batch.y)
+                f1_score.update(y_pred_classes, batch.y)
+                confmat.update(y_pred_classes, batch.y)
+
     stats["test_acc"] = acc.compute().item()
     stats["test_auc"] = auc.compute().item()
     stats["test_recall"] = recall.compute().item()
@@ -181,6 +236,7 @@ def test_step(
 
 def train(
     model: nn.Module,
+    model_type: str,
     train_dataloader: DataLoader,
     test_dataloader: DataLoader,
     loss_fn: torch.nn.Module,
@@ -191,9 +247,10 @@ def train(
     patience: int = 10,
     device: str = "cuda",
     target_dir: str = ".",
-    model_name: str = "best_MLP.pth",
+    model_name: str = "dl_trainer_best_model.pth",
     save_model: bool = False,
 ) -> tuple[dict, dict]:
+    assert model_type in ["torch", "torch_geometric"]
     logger = logging_basic_config(
         verbose=1, content_only=True, filename="dl_trainer.log"
     )
@@ -236,6 +293,7 @@ def train(
     for epoch in tqdm(range(epochs)):
         train_stats = train_step(
             model=model,
+            model_type=model_type,
             dataloader=train_dataloader,
             num_classes=num_classes,
             loss_fn=loss_fn,
@@ -246,6 +304,7 @@ def train(
 
         test_stats = test_step(
             model=model,
+            model_type=model_type,
             dataloader=test_dataloader,
             num_classes=num_classes,
             mode=mode,

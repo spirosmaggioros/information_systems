@@ -37,10 +37,8 @@ def train_complete_classifier(
         metrics["F1"] = stats["F1"]
         metrics["Accuracy"] = stats["Accuracy"]
     else:
-        y_train_relabeled = [y - 1 for y in y_train]
-        y_test_relabeled = [y - 1 for y in y_test]
-        train_ds = MLPDataset(X_train, y_train_relabeled)
-        val_ds = MLPDataset(X_test, y_test_relabeled)
+        train_ds = MLPDataset(X_train, y_train)
+        val_ds = MLPDataset(X_test, y_test)
 
         train_dataloader = DataLoader(train_ds, batch_size=32, shuffle=True)
         test_dataloader = DataLoader(val_ds, batch_size=32, shuffle=False)
@@ -63,6 +61,7 @@ def train_complete_classifier(
 
         _, best_stats = train_dl(
             model=clf,
+            model_type="torch",
             train_dataloader=train_dataloader,
             test_dataloader=test_dataloader,
             num_classes=num_classes,

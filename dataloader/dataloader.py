@@ -1,9 +1,13 @@
 import os
 import re
-from typing import List
+from typing import Any, List, Tuple
 
 import networkx as nx
+import torch
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 from torch_geometric.utils import from_networkx
 
 
@@ -48,9 +52,8 @@ def ds_to_graphs(dataset_folder: str) -> dict:
                     line = line.strip()
                     if line:
                         parts = line.split(",")
-                        if len(parts) == 2:
-                            edge = (int(parts[0].strip()), int(parts[1].strip()))
-                            edges.append(edge)
+                        edge = (int(parts[0].strip()), int(parts[1].strip()))
+                        edges.append(edge)
                         if edge in seen_edges:
                             is_multigraph = True
                         seen_edges.add(edge)
@@ -126,7 +129,7 @@ def ds_to_graphs(dataset_folder: str) -> dict:
     }
 
 
-def nx_to_torch_data(data: list[nx.Graph]) -> List[Data]:
+def nx_to_torch_data(data: List[nx.Graph]) -> List[Data]:
     """
     Transforms a list of nx.Graph to a list of torch_geometric.data.Data for GNN training
     :param data: the input list of graphs
@@ -147,3 +150,82 @@ def nx_to_torch_data(data: list[nx.Graph]) -> List[Data]:
         torch_data.append(from_networkx(graph))
 
     return torch_data
+
+
+class GraphDataloader(Dataset):
+    """
+    Class to transform a list of graphs to batches for torch training
+
+    :param mode: either train, evaluate or inference
+    :param data: input graphs
+    :type data: List[nx.Graph]
+    :param labels: a list of labels for each graph
+    :type labels: list
+    """
+
+    def __init__(
+        self,
+        mode: str,
+        data: List[nx.Graph],
+        labels: List,
+        device: str = "mps",
+    ) -> None:
+        super().__init__()
+
+        assert mode in ["train", "evaluate", "inference"]
+
+        self.mode = mode
+        self.data = nx_to_torch_data(data)
+        self.labels = labels
+        self.device = device
+
+        if labels is not None:
+            self.labels = torch.tensor(labels, dtype=torch.long)
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, index: int) -> Any:
+        graph = self.data[index]
+        if self.mode != "inference" and self.labels is not None:
+            graph.y = self.labels[index]
+
+        # graph.node_attributes = torch.tensor(graph.node_attributes, device=self.device)
+        return graph
+
+
+def create_graph_dataloaders(
+    data: List[nx.Graph],
+    labels: List,
+    batch_size: int,
+    test_size: float = 0.2,
+    device: str = "mps",
+) -> Tuple[DataLoader, DataLoader]:
+    X_train, X_test, y_train, y_test = train_test_split(
+        data,
+        labels,
+        random_state=42,
+        test_size=test_size,
+    )
+    train_loader = GraphDataloader(
+        mode="train", data=X_train, labels=y_train, device=device
+    )
+    test_loader = GraphDataloader(
+        mode="evaluate", data=X_test, labels=y_test, device=device
+    )
+
+    train_dataloader = DataLoader(
+        train_loader,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=os.cpu_count() // 4,  # type: ignore
+    )
+
+    test_dataloader = DataLoader(
+        test_loader,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=os.cpu_count() // 4,  # type: ignore
+    )
+
+    return train_dataloader, test_dataloader
