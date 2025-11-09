@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import networkx as nx
+import numpy as np
 import optuna
 import torch
 from sklearn.model_selection import train_test_split
@@ -9,6 +10,7 @@ from torch.utils.data import DataLoader
 
 from ml_models.classification.mlp import MLP, MLPDataset
 from ml_models.graph_models.graph2vec import Graph2Vec
+from ml_models.graph_models.netLSD import NetLSD
 from trainer.dl_trainer import train as train_dl
 from trainer.svm_trainer import train as train_svm
 
@@ -79,6 +81,7 @@ def train_complete_classifier(
 
 
 def train(
+    graph_model: str,
     graphs: List[nx.Graph],
     labels: List[int],
     num_classes: int,
@@ -86,10 +89,12 @@ def train(
     test_size: float = 0.25,
     classifier: str = "SVC",
     device: str = "mps",
-) -> Tuple[Graph2Vec, Dict[str, float]]:
+) -> Tuple[Union[Graph2Vec, NetLSD], Dict[str, float]]:
     """
-    Train a graph2vec model
+    Train a unsupervised whole-graph model
 
+    :param graph_model: Name of the unsupervised model (graph2vec or netlsd)
+    :type graph_model: str
     :param graphs: List of NetworkX graphs
     :type graphs: List[nx.Graph]
     :param labels: Graph labels
@@ -97,13 +102,14 @@ def train(
     :param test_size: Test set size
     :type test_size: float
 
-    :returns: Trained Graph2Vec model, classifier, and metrics
-    :rtype: Tuple[Graph2Vec, Dict[str, float]]
+    :returns: Trained unsupervised model, classifier, and metrics
+    :rtype: Tuple[model, Dict[str, float]]
 
     Example
     _______
 
     model, metrics = train_best_model(
+        graph_model="graph2vec"
         graphs=graphs,
         labels=labels,
         num_classes=3,
@@ -115,21 +121,63 @@ def train(
     assert len(graphs) > 0, "Graph list cannot be empty"
 
     def objective(trial: Any) -> float:
-        wl_iterations = trial.suggest_categorical(
-            "wl_iterations", [x for x in range(2, 4)]
-        )
-        dimensions = trial.suggest_categorical(
-            "dimensions", [x for x in range(64, 256, 32)]
-        )
-        learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
+        if graph_model == "graph2vec":
+            wl_iterations = trial.suggest_categorical(
+                "wl_iterations", [x for x in range(2, 4)]
+            )
+            dimensions = trial.suggest_categorical(
+                "dimensions", [x for x in range(64, 256, 32)]
+            )
+            learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
 
-        model = Graph2Vec(
-            wl_iterations=wl_iterations,
-            dimensions=dimensions,
-            learning_rate=learning_rate,
-        )
-        model.fit(graphs)
-        embeddings = model.get_embeddings()
+            model_g2v = Graph2Vec(
+                wl_iterations=wl_iterations,
+                dimensions=dimensions,
+                learning_rate=learning_rate,
+            )
+            model_g2v.fit(graphs)
+            embeddings = model_g2v.get_embeddings()
+        else:
+            kernel = trial.suggest_categorical("kernel", ["heat", "wave"])
+            num_timescales = trial.suggest_categorical(
+                "num_timescales", [64, 128, 250, 400]
+            )
+
+            if kernel == "heat":
+                t_min = trial.suggest_float("t_min", 1e-3, 1e-1, log=True)
+                t_max = trial.suggest_float("t_max", 10, 100, log=True)
+                timescales = np.logspace(
+                    np.log10(t_min), np.log10(t_max), num_timescales
+                )
+            else:
+                max_t = trial.suggest_float("max_t", np.pi, 2 * np.pi)
+                timescales = np.linspace(0, max_t, num_timescales)
+
+            eigenvalues = trial.suggest_categorical(
+                "eigenvalues",
+                ["auto", "full", 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 18, 20, 28, 32, 40, 50, 64, 80, 100, (2, 4), (4, 2), (6, 2), (2, 6), (8, 4), (4, 8), (10, 20), (20, 10), (32, 4), (4, 32), (10, 50), (50, 10)]
+            )
+            normalization = trial.suggest_categorical(
+                "normalization", ["empty", "complete", None]
+            )
+            normalized_laplacian = trial.suggest_categorical(
+                "normalized_laplacian", [True, False]
+            )
+
+            model_netlsd = NetLSD(
+                timescales=timescales,
+                kernel=kernel,
+                eigenvalues=eigenvalues,
+                normalization=normalization,
+                normalized_laplacian=normalized_laplacian,
+            )
+
+            try:
+                embeddings = [model_netlsd.fit_transform(g) for g in graphs]
+            except Exception as e:
+                trial.set_user_attr("Failed due to wrong hyperparameters", str(e))
+                return float("-inf")
+
         X_train, X_test, y_train, y_test = train_test_split(
             embeddings, labels, test_size=test_size, random_state=42
         )
@@ -161,13 +209,28 @@ def train(
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
     best_hyperparams = best_checkpoint["trial_params"]
-    best_model = Graph2Vec(
-        wl_iterations=best_hyperparams["wl_iterations"],
-        dimensions=best_hyperparams["dimensions"],
-        learning_rate=best_hyperparams["learning_rate"],
-    )
-    best_model.fit(graphs)
-    embeddings = best_model.get_embeddings()
+    best_model: Union[Graph2Vec, NetLSD]
+
+    if graph_model == "graph2vec":
+        best_model_g2v = Graph2Vec(
+            wl_iterations=best_hyperparams["wl_iterations"],
+            dimensions=best_hyperparams["dimensions"],
+            learning_rate=best_hyperparams["learning_rate"],
+        )
+        best_model_g2v.fit(graphs)
+        embeddings = best_model_g2v.get_embeddings()
+        best_model = best_model_g2v
+    else:
+        best_model_netlsd = NetLSD(
+            timescales=best_hyperparams["timescales"],
+            kernel=best_hyperparams["kernel"],
+            eigenvalues=best_hyperparams["eigenvalues"],
+            normalization=best_hyperparams["normalization"],
+            normalized_laplacian=best_hyperparams["normalized_laplacian"],
+        )
+        embeddings = [best_model_netlsd.fit_transform(g) for g in graphs]
+        best_model = best_model_netlsd
+
     X_train, X_test, y_train, y_test = train_test_split(
         embeddings,
         labels,
