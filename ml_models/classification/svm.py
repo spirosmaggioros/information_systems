@@ -32,7 +32,7 @@ class SVMModel:
                     max_iter=max_iter,
                     kernel="linear",
                     gamma="auto",
-                    C=self.C, 
+                    C=self.C,
                     decision_function_shape="ovr",
                     probability=True,
                 )
@@ -41,7 +41,7 @@ class SVMModel:
                     max_iter=max_iter,
                     kernel="linear",
                     gamma="auto",
-                    C=self.C, 
+                    C=self.C,
                     probability=True,
                 )
         else:
@@ -50,7 +50,7 @@ class SVMModel:
                     max_iter=max_iter,
                     kernel=self.kernel,
                     gamma="auto",
-                    C=self.C, 
+                    C=self.C,
                     decision_function_shape="ovr",
                     probability=True,
                 )

@@ -1,5 +1,5 @@
-from typing import Any, Dict, List, Tuple, Union
 import ast
+from typing import Any, Dict, List, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -156,13 +156,48 @@ def train(
 
             eigenvalues_choice = trial.suggest_categorical(
                 "eigenvalues",
-                ["auto", "full", 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 18, 20, 28, 32, 40, 50, 64, 80, 100, 
-                "(2, 4)", "(4, 2)", "(6, 2)", "(2, 6)", "(8, 4)", "(4, 8)", "(10, 20)", "(20, 10)", 
-                "(32, 4)", "(4, 32)", "(10, 50)", "(50, 10)"]
+                [
+                    "auto",
+                    "full",
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    12,
+                    16,
+                    18,
+                    20,
+                    28,
+                    32,
+                    40,
+                    50,
+                    64,
+                    80,
+                    100,
+                    "(2, 4)",
+                    "(4, 2)",
+                    "(6, 2)",
+                    "(2, 6)",
+                    "(8, 4)",
+                    "(4, 8)",
+                    "(10, 20)",
+                    "(20, 10)",
+                    "(32, 4)",
+                    "(4, 32)",
+                    "(10, 50)",
+                    "(50, 10)",
+                ],
             )
-            
+
             eigenvalues_param: Union[str, int, Tuple[int, int]]
-            if isinstance(eigenvalues_choice, str) and eigenvalues_choice.startswith("("):
+            if isinstance(eigenvalues_choice, str) and eigenvalues_choice.startswith(
+                "("
+            ):
                 eigenvalues_param = ast.literal_eval(eigenvalues_choice)
             else:
                 eigenvalues_param = eigenvalues_choice
@@ -190,7 +225,11 @@ def train(
                 return float("-inf")
 
         X_train, X_test, y_train, y_test = train_test_split(
-            embeddings, labels, test_size=test_size, random_state=42, stratify=labels,
+            embeddings,
+            labels,
+            test_size=test_size,
+            random_state=42,
+            stratify=labels,
         )
 
         metrics = train_complete_classifier(
@@ -238,7 +277,7 @@ def train(
             eigenvalues_param = ast.literal_eval(eigenvalues_choice)
         else:
             eigenvalues_param = eigenvalues_choice
-    
+
         best_model_netlsd = NetLSD(
             timescales=best_hyperparams["timescales"],
             kernel=best_hyperparams["kernel"],

@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typing import Any, List
 
+import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
-import numpy as np
 
 
 class EarlyStopper:
@@ -127,14 +127,22 @@ def compute_metrics(
 
     :return: dictionary with F1, Accuracy and AUC scores
     """
+    y_hat_np = np.array(y_hat)
+    y_preds_np = np.array(y_preds)
+    y_preds_proba_np = np.array(y_preds_proba)
     auc = 0.0
-    if mode == "binary":
-        auc = roc_auc_score(y_hat, y_preds_proba[:, 1])
+
+    if y_preds_proba_np.size > 0:
+        if mode == "binary":
+            auc = roc_auc_score(y_hat_np, y_preds_proba_np[:, 1])
+        else:
+            auc = roc_auc_score(y_hat_np, y_preds_proba_np, multi_class="ovr")
     else:
-        auc = roc_auc_score(y_hat, y_preds_proba, multi_class="ovr")
+        pass
+
     return {
-        "F1": f1_score(y_hat, y_preds, average="macro"),
-        "Accuracy": accuracy_score(y_hat, y_preds),
+        "F1": f1_score(y_hat_np, y_preds_np, average="macro"),
+        "Accuracy": accuracy_score(y_hat_np, y_preds_np),
         "AUC": auc,
     }
 
@@ -154,10 +162,8 @@ def convert_embeddings_to_real(embeddings_raw: List[np.ndarray]) -> List[np.ndar
     processed_embeddings = []
     for emb in embeddings_raw:
         if np.iscomplexobj(emb):
-            # Concatenate real and imaginary parts (e.g., [1+2j, 3+4j] -> [1, 3, 2, 4])
             processed_embeddings.append(np.concatenate((emb.real, emb.imag)))
         else:
-            # Embedding is already real
             processed_embeddings.append(emb)
-    
+
     return processed_embeddings
