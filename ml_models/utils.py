@@ -7,20 +7,21 @@ import scipy.sparse.linalg as spsl
 import torch.nn as nn
 
 
-def init_weights(net: nn.Module) -> None:
+def init_weights(module: nn.Module) -> None:
     """
     Initialize a torch model with kaiming weights
 
     :param net: the input model
     :type net: nn.Module
     """
-    for block in net:
-        for layer in block.children():
-            for name, weight in layer.named_parameters():
-                if "weight" in name:
-                    nn.init.kaiming_normal_(weight)
-                if "bias" in name:
-                    nn.init.constant_(weight, 0.0)
+    if isinstance(module, (nn.Linear, nn.LazyLinear)):
+        nn.init.xavier_uniform_(module.weight)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+    elif isinstance(module, nn.Conv1d):
+        nn.init.xavier_uniform_(module.weight)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
 
 
 def check_1d(inp: object) -> Optional[np.ndarray]:

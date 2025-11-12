@@ -2,14 +2,14 @@ from typing import Optional
 
 import torch
 from torch import nn
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import GIN, global_mean_pool
 
 from ml_models.utils import init_weights
 
 
-class GCN(nn.Module):
+class _GIN(nn.Module):
     """
-    Implementation of a Graph Convolutional Network
+    Helper class for the GIN model
 
     :param task: Either node_classification or graph_classification
     :type task: str
@@ -19,15 +19,17 @@ class GCN(nn.Module):
     :type hid_channels: int
     :param out_channels: the number of output channels(number of classes)
     :type out_channels: int
-    :param dropout: the dropout value for GCNConv layers
+    :param num_layers: the number of layers of GINConv
+    :type num_layers: int
+    :param dropout: the dropout value for the GINConv layers
     :type dropout: float
-    :param num_classes: Optional, only when task is graph classification
-    :type num_classes: Optional[int](default=None)
+    :param num_classes: set only for graph classification
+    :type num_classes: Optional[int](default = None)
 
     Example
     _______
     device = torch.device('cuda')
-    model = GCN(task="node_classification", in_channels=1433, hid_channels=8, out_channels=7).to(device)
+    model = _GIN(task="graph_classification", in_channels=18, hid_channels=32, out_channels=64, num_classes=6)
     """
 
     def __init__(
@@ -36,41 +38,21 @@ class GCN(nn.Module):
         in_channels: int,
         hid_channels: int,
         out_channels: int,
+        num_layers: int = 4,
         dropout: float = 0.0,
         num_classes: Optional[int] = None,
     ) -> None:
-        super(GCN, self).__init__()
+        super(_GIN, self).__init__()
 
         assert task in ["node_classification", "graph_classification"]
 
-        self.in_channels = in_channels
-        self.hid_channels = hid_channels
-        self.out_channels = out_channels
-        self.dropout = dropout
         self.task = task
 
-        self.gcn1 = GCNConv(
+        self.gin = GIN(
             in_channels=in_channels,
-            out_channels=hid_channels,
-            dropout=dropout,
-        )
-        self.relu1 = nn.ReLU(inplace=True)
-        self.gcn2 = GCNConv(
-            in_channels=hid_channels,
-            out_channels=hid_channels,
-            dropout=dropout,
-        )
-        self.relu2 = nn.ReLU(inplace=True)
-        self.gcn3 = GCNConv(
-            in_channels=hid_channels,
-            out_channels=hid_channels,
-            dropout=dropout,
-        )
-
-        self.relu3 = nn.ReLU(inplace=True)
-        self.gcn4 = GCNConv(
-            in_channels=hid_channels,
+            hidden_channels=hid_channels,
             out_channels=out_channels,
+            num_layers=num_layers,
             dropout=dropout,
         )
 
@@ -86,19 +68,10 @@ class GCN(nn.Module):
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-
-        x = self.gcn1(x, edge_index)
-        x = self.relu1(x)
-        x = self.gcn2(x, edge_index)
-        x = self.relu2(x)
-        x = self.gcn3(x, edge_index)
-        x = self.relu3(x)
-        x = self.gcn4(x, edge_index)
+        x = self.gin(x, edge_index, batch)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)
-            x = self.lin(x)
-
-            return x
+            return self.lin(x)
 
         return x

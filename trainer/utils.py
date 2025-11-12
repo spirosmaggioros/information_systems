@@ -6,6 +6,8 @@ from typing import Any, List
 import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from torch import nn
+from torchsummary import summary
 
 
 class EarlyStopper:
@@ -167,3 +169,16 @@ def convert_embeddings_to_real(embeddings_raw: List[np.ndarray]) -> List[np.ndar
             processed_embeddings.append(emb)
 
     return processed_embeddings
+
+
+def get_model_summary(model: nn.Module, in_dim: tuple) -> None:
+    """
+    Returns summary of the model(total parameters, trainable parameters, etc.)
+
+    :param model: The input model
+    :type model: nn.Module
+    :param in_dim: The input feature dimensions
+    :type in_dim: tuple
+    """
+
+    print(summary(model, in_dim))
