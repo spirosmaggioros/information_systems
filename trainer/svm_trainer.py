@@ -37,7 +37,7 @@ def train(
 
     def objective(trial: Any) -> float:
         kernel = trial.suggest_categorical("kernel", ["rbf", "linear"])
-        svc_c = trial.suggest_float("C", 1e-10, 1e3, log=True)
+        svc_c = trial.suggest_float("C", 1e-10, 1e10, log=True)
         model = SVMModel(
             mode=mode,
             C=svc_c,
