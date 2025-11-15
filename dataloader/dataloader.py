@@ -1,5 +1,7 @@
 import os
+import random
 import re
+from itertools import combinations
 from typing import Any, List, Tuple
 
 import networkx as nx
@@ -201,6 +203,23 @@ def create_graph_dataloaders(
     test_size: float = 0.2,
     device: str = "mps",
 ) -> Tuple[DataLoader, DataLoader]:
+    """
+    Generates train and test dataloaders for graph classification tasks
+
+    :param data: Passed list of graphs
+    :type data: List[nx.Graph]
+    :param labels: Graph classes
+    :type labels: List
+    :param batch_size: The input batch size
+    :type batch_size: int
+    :param test_size: The size of test dataloader
+    :type test_size: float(default = 0.2)
+
+    Example
+    _______
+    data = ds_to_graphs("data/ENZYMES")
+    train_dataloader, test_dataloader = create_graph_dataloaders(data["graphs"], data["graph_classes"], 2)
+    """
     X_train, X_test, y_train, y_test = train_test_split(
         data,
         labels,
@@ -229,3 +248,66 @@ def create_graph_dataloaders(
     )
 
     return train_dataloader, test_dataloader
+
+
+def add_random_edges(G: nx.Graph, p: float = 0.2) -> None:
+    """
+    Adds random edges to G
+
+    :param G: The input graph
+    :type G: nx.Graph
+    :param p: The % of the initial edges that will be added to G
+    :type p: float(default = 0.2)
+    """
+    init_edges = len(G.edges())
+    possible_edges = list(combinations(list(G.nodes()), 2))
+    random.shuffle(possible_edges)
+
+    added_edges = 0
+    for edge in possible_edges:
+        if not G.has_edge(edge[0], edge[1]):
+            G.add_edge(edge[0], edge[1])
+            added_edges += 1
+
+        if added_edges >= p * init_edges:
+            break
+
+
+def remove_random_edges(G: nx.Graph, p: float = 0.2) -> None:
+    """
+    Removes random edges from G
+
+    :param G: The input graph
+    :type G: nx.Graph
+    :param p: The % of the initial edges that will be removed from G
+    :type p: float(default = 0.2)
+    """
+    edges = list(G.edges())
+    init_edges = len(edges)
+
+    removed_edges = 0
+    for edge in edges:
+        if G.has_edge(edge[0], edge[1]):
+            G.remove_edge(edge[0], edge[1])
+            removed_edges += 1
+
+        if removed_edges >= p * init_edges:
+            break
+
+
+def shuffle_node_attributes(G: nx.Graph) -> None:
+    """
+    Shuffles node attributes
+
+    :param G: The input graph
+    :type G: nx.Graph
+    """
+    init_node_attributes = nx.get_node_attributes(G, "nøde_attributes")
+    nodes = list(init_node_attributes.keys())
+    shuffled_nodes = random.sample(list(init_node_attributes.keys()), len(nodes))
+    shuffled_node_attributes = {}
+
+    for i, node in enumerate(nodes):
+        shuffled_node_attributes[shuffled_nodes[i]] = init_node_attributes[node]
+
+    nx.set_node_attributes(G, shuffled_node_attributes)
