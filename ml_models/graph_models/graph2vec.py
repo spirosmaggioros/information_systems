@@ -38,7 +38,7 @@ class Graph2Vec:
     data = ds_to_graphs("data/MUTAG")
     model = Graph2Vec(dimensions=128, wl_iterations=2, epochs=100)
     model.fit(data["graphs"])
-    embeddings = model.get_embedding()
+    embeddings = model.get_embeddings()
     """
 
     def __init__(

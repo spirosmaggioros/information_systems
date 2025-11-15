@@ -1,10 +1,13 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
+import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from torch import nn
+from torchsummary import summary
 
 
 class EarlyStopper:
@@ -111,6 +114,7 @@ def logging_basic_config(
 def compute_metrics(
     y_preds: list,
     y_hat: list,
+    mode: str,
     y_preds_proba: list = [],
 ) -> dict:
     """
@@ -125,8 +129,56 @@ def compute_metrics(
 
     :return: dictionary with F1, Accuracy and AUC scores
     """
+    y_hat_np = np.array(y_hat)
+    y_preds_np = np.array(y_preds)
+    y_preds_proba_np = np.array(y_preds_proba)
+    auc = 0.0
+
+    if y_preds_proba_np.size > 0:
+        if mode == "binary":
+            auc = roc_auc_score(y_hat_np, y_preds_proba_np[:, 1])
+        else:
+            auc = roc_auc_score(y_hat_np, y_preds_proba_np, multi_class="ovr")
+    else:
+        pass
+
     return {
-        "F1": f1_score(y_hat, y_preds, average="macro"),
-        "Accuracy": accuracy_score(y_hat, y_preds),
-        "AUC": roc_auc_score(y_hat, y_preds_proba, multi_class="ovr"),
+        "F1": f1_score(y_hat_np, y_preds_np, average="macro"),
+        "Accuracy": accuracy_score(y_hat_np, y_preds_np),
+        "AUC": auc,
     }
+
+
+def convert_embeddings_to_real(embeddings_raw: List[np.ndarray]) -> List[np.ndarray]:
+    """
+    Converts a list of embeddings to real-valued arrays.
+
+    If an embedding is complex (from NetLSD 'wave' kernel), it concatenates
+    its real and imaginary parts. Otherwise, it returns the embedding as is
+
+    :param embeddings_raw: The list of raw embeddings.
+    :type embeddings_raw: List[np.ndarray]
+    :return: A list of real-valued embeddings.
+    :rtype: List[np.ndarray]
+    """
+    processed_embeddings = []
+    for emb in embeddings_raw:
+        if np.iscomplexobj(emb):
+            processed_embeddings.append(np.concatenate((emb.real, emb.imag)))
+        else:
+            processed_embeddings.append(emb)
+
+    return processed_embeddings
+
+
+def get_model_summary(model: nn.Module, in_dim: tuple) -> None:
+    """
+    Returns summary of the model(total parameters, trainable parameters, etc.)
+
+    :param model: The input model
+    :type model: nn.Module
+    :param in_dim: The input feature dimensions
+    :type in_dim: tuple
+    """
+
+    print(summary(model, in_dim))

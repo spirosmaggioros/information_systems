@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict, Optional
 
 import torch
@@ -275,6 +276,7 @@ def train(
         "eval_precision": 0.0,
         "eval_specificity": 0.0,
         "eval_f1": 0.0,
+        "training_time": 0.0,
     }
     best_checkpoint: Dict[str, Any] = {
         "test_acc": [],
@@ -289,6 +291,7 @@ def train(
     best_res = 0.0
 
     early_stopper = EarlyStopper(patience=patience, increase=True)
+    start_training_time = time.time()
 
     for epoch in tqdm(range(epochs)):
         train_stats = train_step(
@@ -361,5 +364,8 @@ def train(
         results["test_precision"].append(test_stats["test_precision"])
         results["test_specificity"].append(test_stats["test_specificity"])
         results["test_f1"].append(test_stats["test_f1"])
+
+    results["training_time"] = time.time() - start_training_time
+    logger.info(f"[INFO] Training finished at {results['training_time']}")
 
     return results, best_checkpoint
