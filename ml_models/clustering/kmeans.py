@@ -32,8 +32,8 @@ class KMeansModel:
         self.model = KMeans(
             n_clusters=self.n_clusters,
             max_iter=self.max_iter,
-            tol = self.tol,
-            random_state=self.random_state
+            tol=self.tol,
+            random_state=self.random_state,
         )
 
     def fit(self, X: List) -> None:

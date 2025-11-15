@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, List, Type, Union
 
 import numpy as np
 import optuna
@@ -39,32 +39,27 @@ def train(
     X_scaled = scaler.fit_transform(X)
 
     def objective(trial: Any) -> float:
-        
-        model_params = {
-            "n_clusters": num_classes,
-            "random_state": 42
-        }
+        ModelClass: Union[Type[KMeansModel], Type[SpectralClusteringModel]]
+        model_params: dict[str, Any] = {"n_clusters": num_classes, "random_state": 42}
 
         if model_type == "kmeans":
             model_params["max_iter"] = trial.suggest_categorical(
                 "max_iter", [100, 300, 500]
             )
-            model_params["tol"] = trial.suggest_float(
-                "tol", 1e-5, 1e-3, log=True
-            )
+            model_params["tol"] = trial.suggest_float("tol", 1e-5, 1e-3, log=True)
             ModelClass = KMeansModel
-            
+
         elif model_type == "spectral":
             model_params["affinity"] = trial.suggest_categorical(
                 "affinity", ["rbf", "nearest_neighbors"]
             )
             if model_params["affinity"] == "rbf":
-                model_params["gamma"] = trial.suggest_float(
-                    "gamma", 1.0, 1e2, log=True 
-                )
+                model_params["gamma"] = trial.suggest_float("gamma", 1.0, 1e2, log=True)
             else:
                 model_params["n_neighbors"] = trial.suggest_int(
-                    "n_neighbors", 3, 10,
+                    "n_neighbors",
+                    3,
+                    10,
                 )
             ModelClass = SpectralClusteringModel
         else:
@@ -72,19 +67,19 @@ def train(
 
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         scores = []
-        
+
         for train_index, test_index in kf.split(X_scaled):
             X_train_fold, X_test_fold = X_scaled[train_index], X_scaled[test_index]
             y_test_fold = y[test_index]
 
             model = ModelClass(**model_params)
-            
-            if model_type == 'kmeans':
+
+            if model_type == "kmeans":
                 model.fit(X_train_fold)
                 pred_labels = model.predict(X_test_fold)
             else:
                 pred_labels = model.predict(X_test_fold)
-            
+
             ari = adjusted_rand_score(y_test_fold, pred_labels)
             scores.append(ari)
 
@@ -97,27 +92,25 @@ def train(
 
     best_trial = study.best_trial
     best_hyperparams = best_trial.params
-    best_ari = best_trial.value
-    
-    print(f"Best {model_type} trial: ARI={best_ari:.4f} with params={best_hyperparams}")
 
-    final_params = {
+    final_params: dict[str, Any] = {
         "n_clusters": num_classes,
         "random_state": 42,
         **best_hyperparams,
     }
 
+    best_model: Union[KMeansModel, SpectralClusteringModel]
     if model_type == "kmeans":
         best_model = KMeansModel(**final_params)
     else:
         best_model = SpectralClusteringModel(**final_params)
 
     best_model.fit(X_scaled)
-    
-    if model_type == 'kmeans':
+
+    if model_type == "kmeans":
         final_labels = best_model.labels_
     else:
-        final_labels = best_model.predict(X_scaled) 
+        final_labels = best_model.predict(X_scaled)
 
     final_ari = adjusted_rand_score(y, final_labels)
 

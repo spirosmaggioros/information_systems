@@ -7,7 +7,6 @@ import optuna
 
 from ml_models.graph_models.graph2vec import Graph2Vec
 from ml_models.graph_models.netLSD import NetLSD
-
 from trainer.clustering_trainer import train as train_clusterer
 from trainer.utils import convert_embeddings_to_real
 
@@ -35,7 +34,7 @@ def train(
 
     :returns: Trained unsupervised model, classifier, and metrics
     :rtype: Tuple[model, Dict[str, float]]
-    
+
     Example
     _______
     from trainer.graph_clust_trainer import train as train_best_models
@@ -54,7 +53,7 @@ def train(
         num_classes=6,
         cluster_model="kmeans"
     )
-    print(f"Final accuracy: {metrics['ARI']:.4f}")    
+    print(f"Final accuracy: {metrics['ARI']:.4f}")
     """
     assert len(graphs) == len(labels), "Number of graphs must match number of labels"
     assert len(graphs) > 0, "Graph list cannot be empty"
@@ -167,7 +166,7 @@ def train(
             labels=labels,
             num_classes=num_classes,
             model_type=cluster_model,
-        )        
+        )
         checkpoint = {
             "trial_params": trial.params,
             "ARI": stats["ARI"],
@@ -177,13 +176,13 @@ def train(
         return float(stats["ARI"])
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100) 
+    study.optimize(objective, n_trials=100)
 
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
     best_hyperparams = best_checkpoint["trial_params"]
     best_model: Union[Graph2Vec, NetLSD]
-    
+
     if graph_model == "graph2vec":
         best_model_g2v = Graph2Vec(
             wl_iterations=best_hyperparams["wl_iterations"],

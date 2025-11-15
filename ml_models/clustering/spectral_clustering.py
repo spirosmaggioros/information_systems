@@ -31,7 +31,7 @@ class SpectralClusteringModel:
         self.n_clusters = n_clusters
         self.affinity = affinity
         self.gamma = gamma
-        self.n_neighbors=n_neighbors
+        self.n_neighbors = n_neighbors
         self.random_state = random_state
         self.model = SpectralClustering(
             n_clusters=self.n_clusters,
