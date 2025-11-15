@@ -17,7 +17,7 @@ def train(
     model_type: str = "kmeans",
 ) -> Any:
     """
-    Trains a clustering model using Optuna for hyperparameter optimization.
+    Trains a clustering model using Optuna for perparameter optimization.
 
     The objective is to maximize the Adjusted Rand Index (ARI) using 5-fold cross-validation.
 
@@ -122,10 +122,7 @@ def train(
     final_ari = adjusted_rand_score(y, final_labels)
 
     stats = {
-        "Best_CV_ARI": best_ari,
-        "Final_Full_Data_ARI": final_ari,
-        "Best_Params": best_hyperparams,
-        "Final_Pred_Labels": final_labels
+        "ARI": final_ari,
     }
 
     return best_model, stats
