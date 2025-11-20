@@ -140,8 +140,8 @@ def train(
             model_g2v.fit(graphs)
             embeddings = model_g2v.get_embeddings()
         elif graph_model == "deepwalk":
-            walk_number = trial.suggest_categorical("walk_number", [5, 10, 20, 40])
-            walk_length = trial.suggest_categorical("walk_length", [40, 80, 120])
+            walk_number = trial.suggest_categorical("walk_number", [2, 5, 7])
+            walk_length = trial.suggest_categorical("walk_length", [5, 7, 10])
             dimensions = trial.suggest_categorical(
                 "dimensions", [x for x in range(64, 256, 32)]
             )
