@@ -10,6 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from ml_models.classification.mlp import MLP, MLPDataset
+from ml_models.graph_models.deepwalk import DeepWalk
 from ml_models.graph_models.graph2vec import Graph2Vec
 from ml_models.graph_models.netLSD import NetLSD
 from trainer.dl_trainer import train as train_dl
@@ -90,11 +91,11 @@ def train(
     test_size: float = 0.25,
     classifier: str = "SVC",
     device: str = "mps",
-) -> Tuple[Union[Graph2Vec, NetLSD], Dict[str, float]]:
+) -> Tuple[Union[Graph2Vec, NetLSD, DeepWalk], Dict[str, float]]:
     """
     Train a unsupervised whole-graph model
 
-    :param graph_model: Name of the unsupervised model (graph2vec or netlsd)
+    :param graph_model: Name of the unsupervised model (graph2vec, netlsd or deepwalk)
     :type graph_model: str
     :param graphs: List of NetworkX graphs
     :type graphs: List[nx.Graph]
@@ -138,6 +139,24 @@ def train(
             )
             model_g2v.fit(graphs)
             embeddings = model_g2v.get_embeddings()
+        elif graph_model == "deepwalk":
+            walk_number = trial.suggest_categorical("walk_number", [2, 5, 7])
+            walk_length = trial.suggest_categorical("walk_length", [5, 7, 10])
+            dimensions = trial.suggest_categorical(
+                "dimensions", [x for x in range(64, 256, 32)]
+            )
+            window_size = trial.suggest_categorical("window_size", [3, 5, 10])
+            learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
+
+            model_dw = DeepWalk(
+                walk_number=walk_number,
+                walk_length=walk_length,
+                dimensions=dimensions,
+                window_size=window_size,
+                learning_rate=learning_rate,
+            )
+            model_dw.fit(graphs)
+            embeddings = model_dw.get_embeddings()
         else:
             kernel = trial.suggest_categorical("kernel", ["heat", "wave"])
             num_timescales = trial.suggest_categorical(
@@ -259,7 +278,7 @@ def train(
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
     best_hyperparams = best_checkpoint["trial_params"]
-    best_model: Union[Graph2Vec, NetLSD]
+    best_model: Union[Graph2Vec, NetLSD, DeepWalk]
 
     if graph_model == "graph2vec":
         best_model_g2v = Graph2Vec(
@@ -270,6 +289,17 @@ def train(
         best_model_g2v.fit(graphs)
         embeddings = best_model_g2v.get_embeddings()
         best_model = best_model_g2v
+    elif graph_model == "deepwalk":
+        best_model_dw = DeepWalk(
+            walk_number=best_hyperparams["walk_number"],
+            walk_length=best_hyperparams["walk_length"],
+            dimensions=best_hyperparams["dimensions"],
+            window_size=best_hyperparams["window_size"],
+            learning_rate=best_hyperparams["learning_rate"],
+        )
+        best_model_dw.fit(graphs)
+        embeddings = best_model_dw.get_embeddings()
+        best_model = best_model_dw
     else:
         eigenvalues_choice = best_hyperparams["eigenvalues"]
         eigenvalues_param: Union[str, int, Tuple[int, int]]
