@@ -8,27 +8,32 @@
 \usepackage{xcolor}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\makeatletter
+\newcommand{\linebreakand}{%
+  \end{@IEEEauthorhalign}
+  \hfill\mbox{}\par
+  \mbox{}\hfill\begin{@IEEEauthorhalign}
+}
+\makeatother
+
 \begin{document}
 
-\title{Conference Paper Title*\\
-{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured in Xplore and
-should not be used}
-\thanks{Identify applicable funding agency here. If none, delete this.}
-}
+\title{Conference Paper Title*}
 
-\author{\IEEEauthorblockN{1\textsuperscript{st} Spiros Maggioros}
+\author{\IEEEauthorblockN{Spiros Maggioros}
 \IEEEauthorblockA{\textit{School of Electrical and Computer Engineering} \\
 \textit{National Technical University of Athens}\\
 Athens, Greece \\
 Spiros.Maggioros@pennmedicine.upenn.edu}
 \and
-\IEEEauthorblockN{2\textsuperscript{nd} Rei Pasai}
+\IEEEauthorblockN{Rei Pasai}
 \IEEEauthorblockA{\textit{School of Electrical and Computer Engineering} \\
 \textit{National Technical University of Athens}\\
 Athens, Greece \\
 ...}
-\and
-\IEEEauthorblockN{3\textsuperscript{rd} Eleni Nasopoulou}
+\linebreakand
+\IEEEauthorblockN{Eleni Nasopoulou}
 \IEEEauthorblockA{\textit{School of Electrical and Computer Engineering} \\
 \textit{National Technical University of Athens}\\
 Athens, Greece \\
