@@ -88,6 +88,8 @@ def train(
     labels: List[int],
     num_classes: int,
     mode: str,
+    out_channels: int = 256,
+    epochs: int = 100,
     test_size: float = 0.25,
     classifier: str = "SVC",
     device: str = "mps",
@@ -127,14 +129,11 @@ def train(
             wl_iterations = trial.suggest_categorical(
                 "wl_iterations", [x for x in range(2, 4)]
             )
-            dimensions = trial.suggest_categorical(
-                "dimensions", [x for x in range(64, 256, 32)]
-            )
             learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
 
             model_g2v = Graph2Vec(
                 wl_iterations=wl_iterations,
-                dimensions=dimensions,
+                dimensions=out_channels,
                 learning_rate=learning_rate,
             )
             model_g2v.fit(graphs)
@@ -142,16 +141,13 @@ def train(
         elif graph_model == "deepwalk":
             walk_number = trial.suggest_categorical("walk_number", [2, 5, 7])
             walk_length = trial.suggest_categorical("walk_length", [5, 7, 10])
-            dimensions = trial.suggest_categorical(
-                "dimensions", [x for x in range(64, 256, 32)]
-            )
             window_size = trial.suggest_categorical("window_size", [3, 5, 10])
             learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
 
             model_dw = DeepWalk(
                 walk_number=walk_number,
                 walk_length=walk_length,
-                dimensions=dimensions,
+                dimensions=out_channels,
                 window_size=window_size,
                 learning_rate=learning_rate,
             )
@@ -273,7 +269,7 @@ def train(
         return float(metrics["F1"])
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=epochs)
 
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
@@ -283,7 +279,7 @@ def train(
     if graph_model == "graph2vec":
         best_model_g2v = Graph2Vec(
             wl_iterations=best_hyperparams["wl_iterations"],
-            dimensions=best_hyperparams["dimensions"],
+            dimensions=out_channels,
             learning_rate=best_hyperparams["learning_rate"],
         )
         best_model_g2v.fit(graphs)
@@ -293,7 +289,7 @@ def train(
         best_model_dw = DeepWalk(
             walk_number=best_hyperparams["walk_number"],
             walk_length=best_hyperparams["walk_length"],
-            dimensions=best_hyperparams["dimensions"],
+            dimensions=out_channels,
             window_size=best_hyperparams["window_size"],
             learning_rate=best_hyperparams["learning_rate"],
         )
@@ -336,7 +332,7 @@ def train(
         classifier=classifier,
         mode=mode,
         device=device,
-        save_model=True,
+        save_model=False,
     )
 
     return best_model, metrics

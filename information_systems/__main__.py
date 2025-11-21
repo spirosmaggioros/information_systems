@@ -27,7 +27,7 @@ from visualization.manifold import visualize_embeddings_manifold
 
 GRAPH_MODELS = ["graph2vec", "netlsd", "deepwalk"]
 TORCH_GEOMETRIC_MODELS = ["gcn", "gat", "gin"]
-CLASSIFIERS = ["mlp", "svm"]
+CLASSIFIERS = ["MLP", "SVM"]
 
 
 def get_ml_model(
@@ -98,7 +98,7 @@ def run_train(args: Any) -> None:
         hidden_channels=args.hidden_channels,
         out_channels=args.out_channels,
         dropout=args.dropout,
-        num_classes=num_classes,
+        num_classes=1 if num_classes == 2 else num_classes,
     )
 
     if args.shuffle_node_attributes:
@@ -118,13 +118,16 @@ def run_train(args: Any) -> None:
         assert (
             args.classifier in CLASSIFIERS
         ), "Please select an available classifier model"
+        assert args.epochs > 0
 
         _, metrics = graph_trainer(
             graph_model=args.model,
             graphs=graphs,
             labels=labels,
-            num_classes=num_classes,
+            num_classes=1 if num_classes == 2 else num_classes,
             mode="binary" if num_classes == 2 else "multiclass",
+            out_channels=args.out_channels,
+            epochs=args.epochs,
             test_size=args.test_size,
             classifier=args.classifier,
             device=args.device,
@@ -153,7 +156,7 @@ def run_train(args: Any) -> None:
             mode="binary" if num_classes == 2 else "multiclass",
             train_dataloader=train_dataloader,
             test_dataloader=test_dataloader,
-            num_classes=num_classes,
+            num_classes=1 if num_classes == 2 else num_classes,
             loss_fn=loss_fn,
             optimizer=optimizer,
             epochs=args.epochs,
@@ -184,7 +187,7 @@ def run_inference(args: Any) -> None:
         hidden_channels=args.hidden_channels,
         out_channels=args.out_channels,
         dropout=args.dropout,
-        num_classes=num_classes,
+        num_classes=1 if num_classes == 2 else num_classes,
     )
 
     dataloader = create_graph_dataloaders(
@@ -194,14 +197,21 @@ def run_inference(args: Any) -> None:
         test_size=0.0,
     )
 
-    _, __ = torch_geometric_inference(
-        model=model,
-        model_weights=args.model_weights,
-        dataloader=dataloader,
-        out_json=args.out_json,
-        ground_truth_labels=labels,
-        mode="graph_classification",
-    )
+    if args.mdoel in ["graph2vec", "netlsd", "deepwalk"]:
+        # TODO: Implement an inference method just like torch_geometric_inference for
+        # graph representation learning methods. To do that, first you should be able to save trained
+        # models in .pkl files and then load and perform inference
+        print("Not yet implemented")
+        pass
+    else:
+        torch_geometric_inference(
+            model=model,
+            model_weights=args.model_weights,
+            dataloader=dataloader,
+            out_json=args.out_json,
+            ground_truth_labels=labels,
+            mode="graph_classification",
+        )
 
     print(f"Results saved at {args.out_json}")
 
