@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -52,27 +52,27 @@ class GCN(nn.Module):
         self.gcn1 = GCNConv(
             in_channels=in_channels,
             out_channels=hid_channels,
-            dropout=dropout,
         )
+        self.dropout1 = nn.Dropout(p=self.dropout)
         self.relu1 = nn.ReLU(inplace=True)
         self.gcn2 = GCNConv(
             in_channels=hid_channels,
             out_channels=hid_channels,
-            dropout=dropout,
         )
+        self.dropout2 = nn.Dropout(p=self.dropout)
         self.relu2 = nn.ReLU(inplace=True)
         self.gcn3 = GCNConv(
             in_channels=hid_channels,
             out_channels=hid_channels,
-            dropout=dropout,
         )
+        self.dropout3 = nn.Dropout(p=self.dropout)
 
         self.relu3 = nn.ReLU(inplace=True)
         self.gcn4 = GCNConv(
             in_channels=hid_channels,
             out_channels=out_channels,
-            dropout=dropout,
         )
+        self.dropout4 = nn.Dropout(p=self.dropout)
 
         if task == "graph_classification":
             assert num_classes is not None
@@ -85,20 +85,22 @@ class GCN(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
+    ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
 
         x = self.gcn1(x, edge_index)
+        x = self.dropout1(x)
         x = self.relu1(x)
         x = self.gcn2(x, edge_index)
+        x = self.dropout2(x)
         x = self.relu2(x)
         x = self.gcn3(x, edge_index)
+        x = self.dropout3(x)
         x = self.relu3(x)
         x = self.gcn4(x, edge_index)
+        x = self.dropout4(x)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)
-            x = self.lin(x)
-
-            return x
+            return x, self.lin(x)
 
         return x

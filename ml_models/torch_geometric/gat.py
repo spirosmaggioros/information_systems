@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -105,7 +105,7 @@ class GAT(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
+    ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
         x = self.gat1(x, edge_index)
         x = self.relu1(x)
         x = self.gat2(x, edge_index)
@@ -116,6 +116,6 @@ class GAT(nn.Module):
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)
-            x = self.lin(x)
+            return x, self.lin(x)
 
         return x

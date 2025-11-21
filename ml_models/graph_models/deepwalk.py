@@ -46,7 +46,7 @@ class DeepWalk:
         dimensions: int = 128,
         workers: int = 4,
         window_size: int = 5,
-        epochs: int = 1,
+        epochs: int = 10,
         learning_rate: float = 0.05,
         min_count: int = 1,
         seed: int = 42,

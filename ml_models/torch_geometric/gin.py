@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -67,11 +67,11 @@ class _GIN(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
+    ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
         x = self.gin(x, edge_index, batch)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)
-            return self.lin(x)
+            return x, self.lin(x)
 
         return x

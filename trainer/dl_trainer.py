@@ -101,20 +101,25 @@ def train_step(
             y_pred = model(
                 x=batch.node_attributes, edge_index=batch.edge_index, batch=batch.batch
             )
-            loss = loss_fn(y_pred, batch.y)
+            if isinstance(y_pred, tuple):
+                _, y_pred_val = y_pred
+            else:
+                y_pred_val = y_pred
+
+            loss = loss_fn(y_pred_val, batch.y)
 
             loss.backward()
 
             optimizer.step()
 
             y_pred_classes = (
-                (torch.sigmoid(y_pred) > 0.5).float()
+                (torch.sigmoid(y_pred_val) > 0.5).float()
                 if mode == "binary"
-                else torch.argmax(y_pred, dim=1)
+                else torch.argmax(y_pred_val, dim=1)
             )
 
             acc.update(y_pred_classes, batch.y)
-            auc.update(y_pred, batch.y)
+            auc.update(y_pred_val, batch.y)
             recall.update(y_pred_classes, batch.y)
             precision.update(y_pred_classes, batch.y)
             specificity.update(y_pred_classes, batch.y)
@@ -210,14 +215,19 @@ def test_step(
                     batch=batch.batch,
                 )
 
+                if isinstance(test_pred, tuple):
+                    _, test_pred_val = test_pred
+                else:
+                    test_pred_val = test_pred
+
                 y_pred_classes = (
-                    (torch.sigmoid(test_pred) > 0.5).float()
+                    (torch.sigmoid(test_pred_val) > 0.5).float()
                     if mode == "binary"
-                    else torch.argmax(test_pred, dim=1)
+                    else torch.argmax(test_pred_val, dim=1)
                 )
 
                 acc.update(y_pred_classes, batch.y)
-                auc.update(test_pred, batch.y)
+                auc.update(test_pred_val, batch.y)
                 recall.update(y_pred_classes, batch.y)
                 precision.update(y_pred_classes, batch.y)
                 specificity.update(y_pred_classes, batch.y)

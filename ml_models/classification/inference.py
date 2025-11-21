@@ -15,7 +15,7 @@ def inference(
     model_weights: str,
     out_csv: str,
     device: str = "cpu",
-) -> None:
+) -> list:
     """
     Load weights and perform inference on passed dataloader, saving results to passed csv file
     (For torch models only)
@@ -63,3 +63,5 @@ def inference(
         }
     )
     inference_res.to_csv(out_csv, index=False)
+
+    return y_preds

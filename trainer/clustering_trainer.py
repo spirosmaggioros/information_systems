@@ -3,7 +3,6 @@ from typing import Any, List, Type, Union
 import numpy as np
 import optuna
 from sklearn.metrics import adjusted_rand_score
-from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 
 from ml_models.clustering.kmeans import KMeansModel
@@ -65,27 +64,13 @@ def train(
         else:
             raise ValueError("Unsupported model_type")
 
-        kf = KFold(n_splits=5, shuffle=True, random_state=42)
-        scores = []
+        model = ModelClass(**model_params)
+        model.fit(X_scaled)
+        y_pred = model.predict(X_scaled)
+        ari = adjusted_rand_score(y_pred, y)
 
-        for train_index, test_index in kf.split(X_scaled):
-            X_train_fold, X_test_fold = X_scaled[train_index], X_scaled[test_index]
-            y_test_fold = y[test_index]
-
-            model = ModelClass(**model_params)
-
-            if model_type == "kmeans":
-                model.fit(X_train_fold)
-                pred_labels = model.predict(X_test_fold)
-            else:
-                pred_labels = model.predict(X_test_fold)
-
-            ari = adjusted_rand_score(y_test_fold, pred_labels)
-            scores.append(ari)
-
-        mean_ari = float(np.mean(scores))
-        trial.set_user_attr("checkpoint", {"mean_ARI": mean_ari})
-        return mean_ari
+        trial.set_user_attr("checkpoint", {"mean_ARI": ari})
+        return float(ari)
 
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=50)

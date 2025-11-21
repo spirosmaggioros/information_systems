@@ -202,7 +202,7 @@ def create_graph_dataloaders(
     batch_size: int,
     test_size: float = 0.2,
     device: str = "mps",
-) -> Tuple[DataLoader, DataLoader]:
+) -> DataLoader | Tuple[DataLoader, DataLoader]:
     """
     Generates train and test dataloaders for graph classification tasks
 
@@ -220,34 +220,48 @@ def create_graph_dataloaders(
     data = ds_to_graphs("data/ENZYMES")
     train_dataloader, test_dataloader = create_graph_dataloaders(data["graphs"], data["graph_classes"], 2)
     """
-    X_train, X_test, y_train, y_test = train_test_split(
-        data,
-        labels,
-        random_state=42,
-        test_size=test_size,
-    )
-    train_loader = GraphDataloader(
-        mode="train", data=X_train, labels=y_train, device=device
-    )
-    test_loader = GraphDataloader(
-        mode="evaluate", data=X_test, labels=y_test, device=device
-    )
 
-    train_dataloader = DataLoader(
-        train_loader,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=os.cpu_count() // 4,  # type: ignore
-    )
+    if test_size == 0.0:
+        loader = GraphDataloader(
+            mode="evaluate", data=data, labels=labels, device=device
+        )
+        dataloader = DataLoader(
+            loader,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=os.cpu_count() // 4,  # type: ignore
+        )
 
-    test_dataloader = DataLoader(
-        test_loader,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=os.cpu_count() // 4,  # type: ignore
-    )
+        return dataloader
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            data,
+            labels,
+            random_state=42,
+            test_size=test_size,
+        )
+        train_loader = GraphDataloader(
+            mode="train", data=X_train, labels=y_train, device=device
+        )
+        test_loader = GraphDataloader(
+            mode="evaluate", data=X_test, labels=y_test, device=device
+        )
 
-    return train_dataloader, test_dataloader
+        train_dataloader = DataLoader(
+            train_loader,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=os.cpu_count() // 4,  # type: ignore
+        )
+
+        test_dataloader = DataLoader(
+            test_loader,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=os.cpu_count() // 4,  # type: ignore
+        )
+
+        return train_dataloader, test_dataloader
 
 
 def add_random_edges(G: nx.Graph, p: float = 0.2) -> None:

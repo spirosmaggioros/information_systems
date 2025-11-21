@@ -1,6 +1,7 @@
+import json
 import time
+from typing import Optional, Tuple
 
-import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -13,11 +14,12 @@ def inference(
     mode: str,
     dataloader: DataLoader,
     model_weights: str,
-    out_csv: str,
+    out_json: str,
+    ground_truth_labels: Optional[list] = None,
     device: str = "cpu",
-) -> None:
+) -> Tuple[list, list]:
     """
-    Load weights and perform inference on passed dataloader, saving results to passed csv file
+    Load weights and perform inference on passed dataloader, saving results to passed json file
     (For torch geometric models only)
 
     :param model: The passed model
@@ -34,6 +36,7 @@ def inference(
     load_torch_model(model, model_weights, device)
 
     y_preds = []
+    y_features = []
     time_per_data = []
     with torch.no_grad():
         for batch in dataloader:
@@ -45,20 +48,30 @@ def inference(
                 edge_index=batch.edge_index,
                 batch=batch.batch,
             )
+            if isinstance(y_pred, tuple):
+                y_pred_features, y_pred_val = y_pred
+            else:
+                y_pred_val = y_pred
+
             time_per_data.append(time.time() - start)
 
             y_pred_classes = (
-                (torch.sigmoid(y_pred) > 0.5).float()
+                (torch.sigmoid(y_pred_val) > 0.5).float()
                 if mode == "binary"
-                else torch.argmax(y_pred, dim=1)
+                else torch.argmax(y_pred_val, dim=1)
             )
 
-            y_preds.append(y_pred_classes.cpu().tolist())
+            y_preds.append(y_pred_classes.cpu().flatten().tolist()[0])
+            y_features.append(y_pred_features.cpu().flatten().tolist())
 
-    inference_res = pd.DataFrame(
-        {
-            "Preds": y_preds,
-            "Time": time_per_data,
-        }
-    )
-    inference_res.to_csv(out_csv, index=False)
+    inference_res = {
+        "predictions": y_preds,
+        "out_features": y_features,
+        "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
+        "time": time_per_data,
+    }
+
+    with open(out_json, "w") as f:
+        json.dump(inference_res, f, indent=4)
+
+    return y_features, y_preds
