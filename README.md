@@ -25,10 +25,9 @@ Package name is: **information_systems**, so make sure to check if this exists.
 ### Train a GRL model
 ```python
 from dataloader.dataloader import ds_to_graphs
-from ml_models.graph_models.graph2vec import Graph2Vec
 from trainer.graph_trainer import train as train_graph
 
-from visualizations.manifold import visualize_embeddings_manifold
+from visualization.manifold import visualize_embeddings_manifold
 
 data = ds_to_graphs("data/MUTAG")
 best_model, metrics = train_graph(
@@ -44,7 +43,7 @@ best_model, metrics = train_graph(
     model_name="graph2vec_best.pkl",
     device="cpu",
 )
-embeddings = best_model.predict(data["graphs"])
+embeddings = best_model.infer(data["graphs"])
 
 visualize_embeddings_manifold(
     features=embeddings,
@@ -64,7 +63,7 @@ from dataloader.dataloader import ds_to_graphs, create_graph_dataloaders
 from ml_models.torch_geometric.gat import GAT
 from trainer.dl_trainer import train as train_torch_geometric
 
-from visualizations.manifold import visualize_embeddings_manifold
+from visualization.manifold import visualize_embeddings_manifold
 
 data = ds_to_graphs("data/ENZYMES")
 
