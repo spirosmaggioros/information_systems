@@ -118,7 +118,7 @@ y_features, y_preds = torch_geometric_inference(
 
 ## CLI
 
-We also implemented a CLI so you don't have to write code every time you need to train, perform inference or even perform simple analysis. You can perform **information_systems --help** for more information, but we will list some examples below:
+We also implemented a CLI so you don't have to write code every time you need to train, perform inference or even perform simple analysis. You can do **information_systems --help** for more information, but we will list some examples below:
 
 ### Train a model:
 ```bash
