@@ -14,7 +14,7 @@ def inference(
     mode: str,
     dataloader: DataLoader,
     model_weights: str,
-    out_json: str,
+    out_json: str = "",
     ground_truth_labels: Optional[list] = None,
     device: str = "cpu",
 ) -> Tuple[list, list]:
@@ -64,14 +64,15 @@ def inference(
             y_preds.append(y_pred_classes.cpu().flatten().tolist()[0])
             y_features.append(y_pred_features.cpu().flatten().tolist())
 
-    inference_res = {
-        "predictions": y_preds,
-        "out_features": y_features,
-        "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
-        "time": time_per_data,
-    }
+    if out_json != "":
+        inference_res = {
+            "predictions": y_preds,
+            "out_features": y_features,
+            "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
+            "time": time_per_data,
+        }
 
-    with open(out_json, "w") as f:
-        json.dump(inference_res, f, indent=4)
+        with open(out_json, "w") as f:
+            json.dump(inference_res, f, indent=4)
 
     return y_features, y_preds

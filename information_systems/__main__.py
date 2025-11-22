@@ -266,8 +266,44 @@ def run_analysis(args: Any) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="information_systems",
-        description="#TODO",
-        usage="#TODO",
+        description="In this repo, you can train a GRL or GNN model on OGB datasets, perform inference on your own graphs or analysis on your computed graph embeddings.",
+        usage="""
+        Train a model:
+        information_systems train --model graph2vec \
+                                  --dataset_dir data/MUTAG \
+                                  --test_size 0.2 \
+                                  --classifier SVM \
+                                  --device cpu \
+                                  --out_channels 256 \
+                                  --epochs 100 \
+                                  --model_name graph2vec_model.pkl \
+
+        information_systems train --model gat \
+                                  --dataset_dir data/ENZYMES \
+                                  --test_size 0.2 \
+                                  --classifier SVM \
+                                  --hidden_channels 256 \
+                                  --out_channels 256 \
+                                  --dropout 0.3 \
+                                  --batch_size 2 \
+                                  --epochs 1000 \
+                                  --patience 100 \
+                                  --model_name gat_best.pth \
+
+        Perform inference with a pre-trained model:
+        information_systems inference --model graph2vec \
+                                      --dataset_dir data/MUTAG \
+                                      --model_weights graph2vec_model.pkl \
+                                      --out_json graph2vec_inference.json \
+
+        information_systems inference --model gat \
+                                      --dataset_dir data/ENZYMES \
+                                      --model_weights gat_best.pth \
+                                      --out_json gat_inference.json \
+
+        Perform analysis with output embeddings:
+        information_systems analysis --in_jsons gat_inference.json \
+                                     --manifold TSNE""",
         add_help=True,
     )
 
@@ -455,7 +491,6 @@ def main() -> None:
     inference.set_defaults(func=run_inference)
 
     # perform analysis on predictions and features from inference
-
     analysis = subparsers.add_parser("analysis", help="Selects analysis mode")
 
     analysis.add_argument(
