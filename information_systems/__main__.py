@@ -14,6 +14,7 @@ from dataloader.dataloader import (
 )
 from ml_models.graph_models.deepwalk import DeepWalk
 from ml_models.graph_models.graph2vec import Graph2Vec
+from ml_models.graph_models.inference import inference as graph_model_inference
 from ml_models.graph_models.netLSD import NetLSD
 from ml_models.torch_geometric.gat import GAT
 from ml_models.torch_geometric.gcn import GCN
@@ -130,6 +131,7 @@ def run_train(args: Any) -> None:
             epochs=args.epochs,
             test_size=args.test_size,
             classifier=args.classifier,
+            model_name=args.model_name,
             device=args.device,
         )
     else:
@@ -197,12 +199,14 @@ def run_inference(args: Any) -> None:
         test_size=0.0,
     )
 
-    if args.mdoel in ["graph2vec", "netlsd", "deepwalk"]:
-        # TODO: Implement an inference method just like torch_geometric_inference for
-        # graph representation learning methods. To do that, first you should be able to save trained
-        # models in .pkl files and then load and perform inference
-        print("Not yet implemented")
-        pass
+    if args.model in ["graph2vec", "netlsd", "deepwalk"]:
+        graph_model_inference(
+            model=model,
+            data=graphs,
+            model_weights=args.model_weights,
+            out_json=args.out_json,
+            ground_truth_labels=labels,
+        )
     else:
         torch_geometric_inference(
             model=model,
@@ -227,15 +231,21 @@ def run_analysis(args: Any) -> None:
         with open(file, "r") as f:
             data = json.load(f)
             features = data["out_features"]
-            predictions = data["predictions"]
-            labels = data["y_hat"]
+            if "predictions" in data.keys():
+                predictions = data["predictions"]
+            else:
+                predictions = []
+            if "y_hat" in data.keys():
+                labels = data["y_hat"]
+            else:
+                labels = []
 
         if len(args.clustering) != 0:
             best_model, stats = clustering_trainer(
                 model_type=args.clustering,
                 graph_embeddings=features,
                 labels=labels if len(labels) > 0 else predictions,
-                num_classes=len(set(predictions)),
+                num_classes=len(set(labels)),
             )
 
             scatter_clusters(

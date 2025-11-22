@@ -1,3 +1,4 @@
+import pickle
 from typing import List
 
 import networkx as nx
@@ -126,3 +127,23 @@ class DeepWalk:
             embeddings.append(graph_embedding)
 
         return np.array(embeddings)
+
+    def save(self, filename: str) -> None:
+        """
+        Saves trained model in .pkl format
+
+        :param filename: The filename(.pkl suffix) of pre-trained model
+        :type filename: str
+        """
+        with open(filename, "wb") as f:
+            pickle.dump(self.model, f)
+
+    def load(self, saved_model: str) -> None:
+        """
+        Load model weights to self model
+
+        :param saved_model: Absolute path to the saved model .pkl file
+        :type saved_model: str
+        """
+        with open(saved_model, "rb") as f:
+            self.model = pickle.load(f)

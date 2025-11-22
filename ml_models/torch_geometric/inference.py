@@ -30,8 +30,8 @@ def inference(
     :type dataloader: DataLoader
     :param model_weights: The complete path to the model weights
     :type model_weights: str
-    :param out_csv: The complete path(with .csv suffix) to save predictions
-    :type out_csv: str
+    :param out_json: The complete path(with .json suffix) to save predictions
+    :type out_json: str
     """
     load_torch_model(model, model_weights, device)
 

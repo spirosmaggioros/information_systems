@@ -92,6 +92,7 @@ def train(
     epochs: int = 100,
     test_size: float = 0.25,
     classifier: str = "SVC",
+    model_name: str = "best_graph_model.pkl",
     device: str = "mps",
 ) -> Tuple[Union[Graph2Vec, NetLSD, DeepWalk], Dict[str, float]]:
     """
@@ -314,6 +315,10 @@ def train(
         embeddings_raw = [best_model_netlsd.fit_transform(g) for g in graphs]
         embeddings = convert_embeddings_to_real(embeddings_raw)
         best_model = best_model_netlsd
+
+    # TODO: Fix this for NetLSD model
+    best_model.save(model_name)  # type: ignore
+    print(f"Model saved at {model_name}")
 
     X_train, X_test, y_train, y_test = train_test_split(
         embeddings,
