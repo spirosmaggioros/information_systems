@@ -108,7 +108,7 @@ y_features, y_preds = torch_geometric_inference(
     model=model,
     mode="multiclass",
     dataloader=test_dataloader,
-    mdoel_weights="gat_best.pth",
+    model_weights="gat_best.pth",
     out_json="inference_res.json",
 )
 
