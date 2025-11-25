@@ -2,14 +2,15 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
-from torch_geometric.nn import GIN, global_mean_pool
+from torch_geometric.nn import global_mean_pool
+from torch_geometric.nn.models import PNA
 
 from ml_models.utils import init_weights
 
 
-class _GIN(nn.Module):
+class _PNA(nn.Module):
     """
-    Helper class for the GIN model
+    Helper class for the PNA model
 
     :param task: Either node_classification or graph_classification
     :type task: str
@@ -38,29 +39,32 @@ class _GIN(nn.Module):
         in_channels: int,
         hid_channels: int,
         out_channels: int,
+        deg_hist: torch.Tensor,
         num_layers: int = 4,
         dropout: float = 0.0,
         num_classes: Optional[int] = None,
     ) -> None:
-        super(_GIN, self).__init__()
+        super(_PNA, self).__init__()
 
         assert task in ["node_classification", "graph_classification"]
 
         self.task = task
-
-        self.gin = GIN(
+        self.pna = PNA(
             in_channels=in_channels,
             hidden_channels=hid_channels,
             out_channels=out_channels,
             num_layers=num_layers,
             dropout=dropout,
+            aggregators=["sum", "mean", "min", "max"],
+            scalers=["identity", "amplification", "attenuation"],
+            deg=deg_hist,
         )
 
         if task == "graph_classification":
             assert num_classes is not None
             self.lin = nn.Linear(out_channels, num_classes)
 
-        init_weights(self.gin)
+        init_weights(self.pna)
 
     def forward(
         self,
@@ -68,7 +72,7 @@ class _GIN(nn.Module):
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
-        x = self.gin(x, edge_index, batch)
+        x = self.pna(x, edge_index, batch)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)

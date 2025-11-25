@@ -1,8 +1,10 @@
 from typing import Optional, Tuple
 
 import torch
+import torch.nn.functional as F
 from torch import nn
-from torch_geometric.nn import GATv2Conv, global_mean_pool
+from torch.nn import Dropout, ModuleList
+from torch_geometric.nn import BatchNorm, GATv2Conv, global_mean_pool
 
 from ml_models.utils import init_weights
 
@@ -19,6 +21,8 @@ class GAT(nn.Module):
     :type hid_channels: int
     :param out_channels: the number of output channels(number of classes)
     :type out_channels: int
+    :param num_layers: the total number of convolutional layers of the model(default = 4)
+    :type num_layers: int
     :param in_head: the number of heads to use for multihead attention
     :type in_head: int
     :param out_head: the number of heads to use in the final layer of GATConv
@@ -40,6 +44,7 @@ class GAT(nn.Module):
         in_channels: int,
         hid_channels: int,
         out_channels: int,
+        num_layers: int = 4,
         in_head: int = 4,
         out_head: int = 6,
         dropout: float = 0.0,
@@ -55,48 +60,51 @@ class GAT(nn.Module):
         self.dropout = dropout
         self.task = task
 
-        self.gat1 = GATv2Conv(
-            in_channels=in_channels,
-            out_channels=hid_channels,
-            heads=in_head,
-            dropout=dropout,
-        )
-        self.relu1 = nn.ReLU(inplace=True)
-        self.gat2 = GATv2Conv(
-            in_channels=in_head * hid_channels,
-            out_channels=hid_channels,
-            heads=in_head,
-            dropout=dropout,
-        )
-        self.relu2 = nn.ReLU(inplace=True)
+        self.convs = ModuleList()
+        self.batch_norms = ModuleList()
+        self.dropouts = ModuleList()
 
-        self.gat3 = GATv2Conv(
-            in_channels=in_head * hid_channels,
-            out_channels=hid_channels,
-            heads=in_head,
-            dropout=dropout,
-        )
-        self.relu3 = nn.ReLU(inplace=True)
+        for i in range(num_layers):
+            if i == 0:
+                conv = GATv2Conv(
+                    in_channels=in_channels,
+                    out_channels=hid_channels,
+                    heads=in_head,
+                )
+            else:
+                conv = GATv2Conv(
+                    in_channels=in_head * hid_channels,
+                    out_channels=hid_channels,
+                    heads=in_head,
+                )
+
+            self.convs.append(conv)
+            self.batch_norms.append(BatchNorm(in_head * hid_channels))
+            self.dropouts.append(Dropout(dropout))
 
         if task == "graph_classification":
             assert num_classes is not None
-            self.gat4 = GATv2Conv(
-                in_channels=in_head * hid_channels,
-                out_channels=out_channels,
-                heads=out_head,
-                dropout=dropout,
-                concat=False,
+            self.convs.append(
+                GATv2Conv(
+                    in_channels=in_head * hid_channels,
+                    out_channels=out_channels,
+                    heads=out_head,
+                    concat=False,
+                )
             )
             self.lin = nn.Linear(out_channels, num_classes)
         else:
             assert num_classes is None
-            self.gat4 = GATv2Conv(
-                in_channels=in_head * hid_channels,
-                out_channels=out_channels,
-                heads=1,
-                dropout=dropout,
-                concat=False,
+            self.convs.append(
+                GATv2Conv(
+                    in_channels=in_head * hid_channels,
+                    out_channels=out_channels,
+                    heads=1,
+                    concat=False,
+                )
             )
+
+        self.dropouts.append(Dropout(dropout))
 
         self.apply(init_weights)
 
@@ -106,13 +114,13 @@ class GAT(nn.Module):
         edge_index: torch.Tensor,
         batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
-        x = self.gat1(x, edge_index)
-        x = self.relu1(x)
-        x = self.gat2(x, edge_index)
-        x = self.relu2(x)
-        x = self.gat3(x, edge_index)
-        x = self.relu3(x)
-        x = self.gat4(x, edge_index)
+
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
+            if i < len(self.batch_norms):
+                x = self.batch_norms[i](x)
+            x = self.dropouts[i](x)
+            x = F.relu(x)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)

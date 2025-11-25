@@ -26,7 +26,7 @@ def train_step(
     optimizer: torch.optim.Optimizer,
     mode: str,
     num_classes: Optional[int] = None,
-    device: str = "cuda",
+    device: str = "cpu",
 ) -> dict:
     assert mode in ["binary", "multiclass"]
     model.train()
@@ -141,7 +141,7 @@ def test_step(
     dataloader: DataLoader,
     mode: str,
     num_classes: Optional[int] = None,
-    device: str = "cuda",
+    device: str = "cpu",
 ) -> dict:
     assert mode in ["binary", "multiclass"]
     model.eval()
@@ -256,7 +256,7 @@ def train(
     num_classes: Optional[int] = None,
     epochs: int = 200,
     patience: int = 10,
-    device: str = "cuda",
+    device: str = "cpu",
     target_dir: str = ".",
     model_name: str = "dl_trainer_best_model.pth",
     save_model: bool = False,
@@ -341,7 +341,7 @@ def train(
                 "test_confussion_matrix"
             ]
 
-        if early_stopper.early_stop(test_stats["test_acc"]):
+        if early_stopper.early_stop(test_stats["test_f1"]):
             logger.info("Early stopping the training!")
             break
 

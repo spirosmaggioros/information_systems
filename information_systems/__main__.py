@@ -1,14 +1,18 @@
 import argparse
 import json
-from typing import Any
+from typing import Any, Optional
 
 import torch
+from sklearn.model_selection import train_test_split
 from torch import nn
+from torch_geometric.data import Data
+from torch_geometric.utils import degree
 
 from dataloader.dataloader import (
     add_random_edges,
     create_graph_dataloaders,
     ds_to_graphs,
+    nx_to_torch_data,
     remove_random_edges,
     shuffle_node_attributes,
 )
@@ -20,6 +24,7 @@ from ml_models.torch_geometric.gat import GAT
 from ml_models.torch_geometric.gcn import GCN
 from ml_models.torch_geometric.gin import _GIN
 from ml_models.torch_geometric.inference import inference as torch_geometric_inference
+from ml_models.torch_geometric.pna import _PNA
 from trainer.clustering_trainer import train as clustering_trainer
 from trainer.dl_trainer import train as dl_trainer
 from trainer.graph_trainer import train as graph_trainer
@@ -27,8 +32,30 @@ from visualization.clustering import scatter_clusters
 from visualization.manifold import visualize_embeddings_manifold
 
 GRAPH_MODELS = ["graph2vec", "netlsd", "deepwalk"]
-TORCH_GEOMETRIC_MODELS = ["gcn", "gat", "gin"]
+TORCH_GEOMETRIC_MODELS = ["gcn", "gat", "gin", "pna"]
 CLASSIFIERS = ["MLP", "SVM"]
+
+
+def compute_deg_hist(data: list[Data], labels: list, test_size: float) -> torch.Tensor:
+    # not the best thing to do, but random_state=42 asserts same split every time
+    X_train, _, _, _ = train_test_split(
+        data,
+        labels,
+        random_state=42,
+        test_size=test_size,
+    )
+
+    max_deg = -1
+    for g in X_train:
+        d = degree(g.edge_index[1], num_nodes=g.num_nodes, dtype=torch.long)
+        max_deg = max(max_deg, int(d.max()))
+
+    deg = torch.zeros(max_deg + 1, dtype=torch.long)
+    for g in X_train:
+        d = degree(g.edge_index[1], num_nodes=g.num_nodes, dtype=torch.long)
+        deg += torch.bincount(d, minlength=deg.numel())
+
+    return deg
 
 
 def get_ml_model(
@@ -36,8 +63,10 @@ def get_ml_model(
     in_channels: int,
     hidden_channels: int,
     out_channels: int,
+    num_layers: int,
     dropout: float,
     num_classes: int,
+    deg_hist: Optional[torch.Tensor] = None,
 ) -> nn.Module:
     name_to_model = {
         "gcn": GCN(
@@ -45,6 +74,7 @@ def get_ml_model(
             in_channels=in_channels,
             hid_channels=hidden_channels,
             out_channels=out_channels,
+            num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
         ),
@@ -53,6 +83,7 @@ def get_ml_model(
             in_channels=in_channels,
             hid_channels=hidden_channels,
             out_channels=out_channels,
+            num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
         ),
@@ -61,8 +92,19 @@ def get_ml_model(
             in_channels=in_channels,
             hid_channels=hidden_channels,
             out_channels=out_channels,
+            num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
+        ),
+        "pna": _PNA(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+            deg_hist=deg_hist,
         ),
         "graph2vec": Graph2Vec(
             dimensions=out_channels,
@@ -80,6 +122,7 @@ def run_train(args: Any) -> None:
         args.model in GRAPH_MODELS or args.model in TORCH_GEOMETRIC_MODELS
     ), "Please select an available model"
     assert args.test_size < 1.0 and args.test_size > 0.0
+    assert args.num_layers > 0
     assert args.device in ["cpu", "mps", "cuda"]
 
     data = ds_to_graphs(dataset_folder=args.dataset_dir)
@@ -88,6 +131,8 @@ def run_train(args: Any) -> None:
     node_attributes = data["node_attributes"]
 
     num_classes = len(set(labels))
+
+    deg_hist = compute_deg_hist(nx_to_torch_data(graphs), labels, args.test_size)
 
     model = get_ml_model(
         model_name=args.model,
@@ -98,8 +143,10 @@ def run_train(args: Any) -> None:
         ),
         hidden_channels=args.hidden_channels,
         out_channels=args.out_channels,
+        num_layers=args.num_layers,
         dropout=args.dropout,
         num_classes=1 if num_classes == 2 else num_classes,
+        deg_hist=deg_hist,
     )
 
     if args.shuffle_node_attributes:
@@ -188,6 +235,7 @@ def run_inference(args: Any) -> None:
         ),
         hidden_channels=args.hidden_channels,
         out_channels=args.out_channels,
+        num_layers=args.num_layers,
         dropout=args.dropout,
         num_classes=1 if num_classes == 2 else num_classes,
     )
@@ -371,6 +419,14 @@ def main() -> None:
         default=0.0,
         required=False,
         help="Only for torch geometric: Specify the dropout value for each convolutional layer of torch geometric models",
+    )
+
+    train.add_argument(
+        "--num_layers",
+        type=int,
+        default=4,
+        required=False,
+        help="Only for torch geometric: Specify the number of convolutional layers of torch geometric models",
     )
 
     train.add_argument(

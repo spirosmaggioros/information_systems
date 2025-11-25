@@ -1,8 +1,10 @@
 from typing import Optional, Tuple
 
 import torch
+import torch.nn.functional as F
 from torch import nn
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch.nn import ModuleList
+from torch_geometric.nn import BatchNorm, GCNConv, global_mean_pool
 
 from ml_models.utils import init_weights
 
@@ -19,6 +21,8 @@ class GCN(nn.Module):
     :type hid_channels: int
     :param out_channels: the number of output channels(number of classes)
     :type out_channels: int
+    :param num_layers: the total number of convolutional layers of the model(default = 4)
+    :type num_layers: int
     :param dropout: the dropout value for GCNConv layers
     :type dropout: float
     :param num_classes: Optional, only when task is graph classification
@@ -36,6 +40,7 @@ class GCN(nn.Module):
         in_channels: int,
         hid_channels: int,
         out_channels: int,
+        num_layers: int = 4,
         dropout: float = 0.0,
         num_classes: Optional[int] = None,
     ) -> None:
@@ -49,30 +54,18 @@ class GCN(nn.Module):
         self.dropout = dropout
         self.task = task
 
-        self.gcn1 = GCNConv(
-            in_channels=in_channels,
-            out_channels=hid_channels,
-        )
-        self.dropout1 = nn.Dropout(p=self.dropout)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.gcn2 = GCNConv(
-            in_channels=hid_channels,
-            out_channels=hid_channels,
-        )
-        self.dropout2 = nn.Dropout(p=self.dropout)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.gcn3 = GCNConv(
-            in_channels=hid_channels,
-            out_channels=hid_channels,
-        )
-        self.dropout3 = nn.Dropout(p=self.dropout)
-
-        self.relu3 = nn.ReLU(inplace=True)
-        self.gcn4 = GCNConv(
-            in_channels=hid_channels,
-            out_channels=out_channels,
-        )
-        self.dropout4 = nn.Dropout(p=self.dropout)
+        self.convs = ModuleList()
+        self.batch_norms = ModuleList()
+        self.dropouts = ModuleList()
+        for _ in range(num_layers):
+            self.convs.append(
+                GCNConv(
+                    in_channels=in_channels,
+                    out_channels=hid_channels,
+                )
+            )
+            self.batch_norms.append(BatchNorm(hid_channels))
+            self.dropouts.append(nn.Dropout(dropout))
 
         if task == "graph_classification":
             assert num_classes is not None
@@ -87,17 +80,12 @@ class GCN(nn.Module):
         batch: Optional[torch.Tensor] = None,
     ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
 
-        x = self.gcn1(x, edge_index)
-        x = self.dropout1(x)
-        x = self.relu1(x)
-        x = self.gcn2(x, edge_index)
-        x = self.dropout2(x)
-        x = self.relu2(x)
-        x = self.gcn3(x, edge_index)
-        x = self.dropout3(x)
-        x = self.relu3(x)
-        x = self.gcn4(x, edge_index)
-        x = self.dropout4(x)
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
+            if i < len(self.batch_norms):
+                x = self.batch_norms[i](x)
+            x = self.dropouts[i](x)
+            x = F.relu(x)
 
         if self.task == "graph_classification":
             x = global_mean_pool(x, batch)
