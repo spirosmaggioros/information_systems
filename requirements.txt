@@ -1,0 +1,9 @@
+torch==2.9.1
+torch_geometric
+optuna
+karateclub
+networkx
+scikit-learn
+torchsummary
+matplotlib
+grave
