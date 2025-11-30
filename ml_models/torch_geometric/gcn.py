@@ -57,14 +57,32 @@ class GCN(nn.Module):
         self.convs = ModuleList()
         self.batch_norms = ModuleList()
         self.dropouts = ModuleList()
-        for _ in range(num_layers):
-            self.convs.append(
-                GCNConv(
-                    in_channels=in_channels,
-                    out_channels=hid_channels,
+        for i in range(num_layers):
+            if i == 0:
+                self.convs.append(
+                    GCNConv(
+                        in_channels=in_channels,
+                        out_channels=hid_channels,
+                    )
                 )
-            )
-            self.batch_norms.append(BatchNorm(hid_channels))
+                self.batch_norms.append(BatchNorm(hid_channels))
+            elif i == num_layers - 1:
+                self.convs.append(
+                    GCNConv(
+                        in_channels=hid_channels,
+                        out_channels=out_channels,
+                    )
+                )
+                self.batch_norms.append(BatchNorm(out_channels))
+            else:
+                self.convs.append(
+                    GCNConv(
+                        in_channels=hid_channels,
+                        out_channels=hid_channels,
+                    )
+                )
+                self.batch_norms.append(BatchNorm(hid_channels))
+
             self.dropouts.append(nn.Dropout(dropout))
 
         if task == "graph_classification":
