@@ -490,7 +490,7 @@ def main() -> None:
     )
     train.set_defaults(func=run_train)
 
-    # Perform inference with a pre-trained model(Used to extract embeddings for all other tasks)
+    # perform inference with a pre-trained model(Used to extract embeddings for all other tasks)
     inference = subparsers.add_parser("inference", help="Selects inference mode")
 
     inference.add_argument(
