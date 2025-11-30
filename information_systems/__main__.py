@@ -66,6 +66,7 @@ def get_ml_model(
     num_layers: int,
     dropout: float,
     num_classes: int,
+    device: str,
     deg_hist: Optional[torch.Tensor] = None,
 ) -> nn.Module:
     name_to_model = {
@@ -77,7 +78,7 @@ def get_ml_model(
             num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
-        ),
+        ).to(device),
         "gat": GAT(
             task="graph_classification",
             in_channels=in_channels,
@@ -86,7 +87,7 @@ def get_ml_model(
             num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
-        ),
+        ).to(device),
         "gin": _GIN(
             task="graph_classification",
             in_channels=in_channels,
@@ -95,7 +96,7 @@ def get_ml_model(
             num_layers=num_layers,
             dropout=dropout,
             num_classes=num_classes,
-        ),
+        ).to(device),
         "pna": _PNA(
             task="graph_classification",
             in_channels=in_channels,
@@ -105,7 +106,7 @@ def get_ml_model(
             dropout=dropout,
             num_classes=num_classes,
             deg_hist=deg_hist,
-        ),
+        ).to(device),
         "graph2vec": Graph2Vec(
             dimensions=out_channels,
         ),
@@ -147,6 +148,7 @@ def run_train(args: Any) -> None:
         dropout=args.dropout,
         num_classes=1 if num_classes == 2 else num_classes,
         deg_hist=deg_hist,
+        device=args.device,
     )
 
     if args.shuffle_node_attributes:
@@ -237,6 +239,7 @@ def run_inference(args: Any) -> None:
         out_channels=args.out_channels,
         num_layers=args.num_layers,
         dropout=args.dropout,
+        device=args.device,
         num_classes=1 if num_classes == 2 else num_classes,
     )
 
@@ -543,6 +546,14 @@ def main() -> None:
         type=str,
         required=True,
         help="[REQUIRED] Absolute path of the .json file with predictions and out features",
+    )
+
+    inference.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        required=False,
+        help="Specify the device to train(only for torch geometric, either cpu, mps or cuda). Note that mps might have some bugs",
     )
     inference.set_defaults(func=run_inference)
 
