@@ -128,7 +128,7 @@ def train(
     def objective(trial: Any) -> float:
         if graph_model == "graph2vec":
             wl_iterations = trial.suggest_categorical(
-                "wl_iterations", [x for x in range(2, 4)]
+                "wl_iterations", [x for x in range(2, 5)]
             )
             learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-1, log=True)
 
