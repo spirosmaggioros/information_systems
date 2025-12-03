@@ -156,19 +156,14 @@ def train(
             embeddings = model_dw.get_embeddings()
         else:
             kernel = trial.suggest_categorical("kernel", ["heat", "wave"])
-            num_timescales = trial.suggest_categorical(
-                "num_timescales", [64, 128, 250, 400]
-            )
 
             if kernel == "heat":
                 t_min = trial.suggest_float("t_min", 1e-3, 1e-1, log=True)
                 t_max = trial.suggest_float("t_max", 10, 100, log=True)
-                timescales = np.logspace(
-                    np.log10(t_min), np.log10(t_max), num_timescales
-                )
+                timescales = np.logspace(np.log10(t_min), np.log10(t_max), out_channels)
             else:
                 max_t = trial.suggest_float("max_t", np.pi, 2 * np.pi)
-                timescales = np.linspace(0, max_t, num_timescales)
+                timescales = np.linspace(0, max_t, out_channels)
 
             eigenvalues_choice = trial.suggest_categorical(
                 "eigenvalues",
@@ -305,9 +300,20 @@ def train(
         else:
             eigenvalues_param = eigenvalues_choice
 
+        kernel = best_hyperparams["kernel"]
+        if kernel == "heat":
+            t_min = best_hyperparams["t_min"]
+            t_max = best_hyperparams["t_max"]
+            recalculated_timescales = np.logspace(
+                np.log10(t_min), np.log10(t_max), out_channels
+            )
+        else:
+            max_t = best_hyperparams["max_t"]
+            recalculated_timescales = np.linspace(0, max_t, out_channels)
+
         best_model_netlsd = NetLSD(
-            timescales=best_hyperparams["timescales"],
-            kernel=best_hyperparams["kernel"],
+            timescales=recalculated_timescales,
+            kernel=kernel,
             eigenvalues=eigenvalues_param,
             normalization=best_hyperparams["normalization"],
             normalized_laplacian=best_hyperparams["normalized_laplacian"],
@@ -316,8 +322,7 @@ def train(
         embeddings = convert_embeddings_to_real(embeddings_raw)
         best_model = best_model_netlsd
 
-    # TODO: Fix this for NetLSD model
-    best_model.save(model_name)  # type: ignore
+    best_model.save(model_name)
     print(f"Model saved at {model_name}")
 
     X_train, X_test, y_train, y_test = train_test_split(

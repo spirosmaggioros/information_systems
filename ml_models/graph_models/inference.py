@@ -3,6 +3,7 @@ import time
 from typing import Any, List, Optional
 
 import networkx as nx
+import numpy as np
 
 
 def inference(
@@ -27,7 +28,12 @@ def inference(
     model.load(model_weights)
 
     start_time = time.time()
-    out_features = model.infer(data).tolist()
+    raw_features = model.infer(data)
+
+    if np.iscomplexobj(raw_features):
+        raw_features = np.concatenate((raw_features.real, raw_features.imag), axis=1)
+
+    out_features = raw_features.tolist()
     end_time = time.time()
 
     inference_res = {
