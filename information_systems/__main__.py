@@ -228,6 +228,8 @@ def run_inference(args: Any) -> None:
     node_attributes = data["node_attributes"]
     num_classes = len(set(labels))
 
+    deg_hist = compute_deg_hist(nx_to_torch_data(graphs), labels, 0.25)
+
     model = get_ml_model(
         model_name=args.model,
         in_channels=(
@@ -240,6 +242,7 @@ def run_inference(args: Any) -> None:
         num_layers=args.num_layers,
         dropout=args.dropout,
         device=args.device,
+        deg_hist=deg_hist,
         num_classes=1 if num_classes == 2 else num_classes,
     )
 
@@ -307,10 +310,15 @@ def run_analysis(args: Any) -> None:
             print(f"ARI score: {stats['ARI']}")
 
         if len(args.manifold) != 0:
+            assert args.n_components in [
+                2,
+                3,
+            ], "Please use 2 or 3 latent embeddings for manifold learning"
             visualize_embeddings_manifold(
                 method=args.manifold,
                 features=features,
                 labels=labels if len(labels) > 0 else predictions,
+                n_components=args.n_components,
             )
 
 
@@ -520,24 +528,28 @@ def main() -> None:
     inference.add_argument(
         "--hidden_channels",
         type=int,
-        default=256,
-        required=False,
+        required=True,
         help="Only for torch geometric: Specify the number of hidden channels",
     )
 
     inference.add_argument(
         "--out_channels",
         type=int,
-        default=256,
-        required=False,
+        required=True,
         help="Only for torch geometric: Specify the dimensionality of output features",
+    )
+
+    inference.add_argument(
+        "--num_layers",
+        type=int,
+        required=True,
+        help="Only for torch geometric: Specify the number of layers",
     )
 
     inference.add_argument(
         "--dropout",
         type=float,
-        default=0.0,
-        required=False,
+        required=True,
         help="Only for torch geometric: Specify the dropout value for each convolutional layer of torch geometric models",
     )
 
@@ -582,6 +594,14 @@ def main() -> None:
         default="",
         required=False,
         help="Select an available manifold method to perform analysis on",
+    )
+
+    analysis.add_argument(
+        "--n_components",
+        type=int,
+        default=2,
+        required=False,
+        help="Select latent embeddings for manifold learning",
     )
 
     analysis.add_argument(
