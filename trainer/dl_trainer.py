@@ -260,10 +260,13 @@ def train(
     target_dir: str = ".",
     model_name: str = "dl_trainer_best_model.pth",
     save_model: bool = False,
+    log_filename: str = "dl_trainer.log",
 ) -> tuple[dict, dict]:
     assert model_type in ["torch", "torch_geometric"]
     logger = logging_basic_config(
-        verbose=1, content_only=True, filename="dl_trainer.log"
+        verbose=1,
+        content_only=True,
+        filename=log_filename,
     )
 
     results: Dict[str, Any] = {

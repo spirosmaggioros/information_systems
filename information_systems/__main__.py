@@ -43,6 +43,7 @@ def compute_deg_hist(data: list[Data], labels: list, test_size: float) -> torch.
         labels,
         random_state=42,
         test_size=test_size,
+        stratify=labels,
     )
 
     max_deg = -1
@@ -197,9 +198,7 @@ def run_train(args: Any) -> None:
             loss_fn = nn.BCEWithLogitsLoss()
         else:
             loss_fn = nn.CrossEntropyLoss()
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=0.001, weight_decay=0.1, amsgrad=True
-        )
+        optimizer = torch.optim.Adadelta(model.parameters(), lr=0.1)
 
         _, metrics = dl_trainer(
             model=model,
@@ -216,6 +215,7 @@ def run_train(args: Any) -> None:
             target_dir=args.target_dir,
             model_name=args.model_name,
             save_model=True,
+            log_filename=args.log_filename,
         )
 
     print(f"Training metrics: {metrics}")
@@ -241,9 +241,9 @@ def run_inference(args: Any) -> None:
         out_channels=args.out_channels,
         num_layers=args.num_layers,
         dropout=args.dropout,
-        device=args.device,
         deg_hist=deg_hist,
         num_classes=1 if num_classes == 2 else num_classes,
+        device=args.device,
     )
 
     dataloader = create_graph_dataloaders(
@@ -498,6 +498,14 @@ def main() -> None:
         type=float,
         default=0.0,
         help="If set, a random p% of the total edges of each graph will be removed",
+    )
+
+    train.add_argument(
+        "--log_filename",
+        type=str,
+        required=False,
+        default="dl_trainer.log",
+        help="Set logger's filename",
     )
     train.set_defaults(func=run_train)
 
