@@ -75,6 +75,9 @@ def train_step(
 
             y_pred = model(X)
 
+            if mode == "binary":
+                y_pred = y_pred.squeeze(-1)
+
             loss = loss_fn(y_pred, y)
             loss.backward()
 
@@ -96,6 +99,9 @@ def train_step(
         for batch in dataloader:
             batch = batch.to(device)
 
+            if mode == "binary":
+                batch.y = batch.y.float()
+
             optimizer.zero_grad()
 
             y_pred = model(
@@ -105,6 +111,9 @@ def train_step(
                 _, y_pred_val = y_pred
             else:
                 y_pred_val = y_pred
+
+            if mode == "binary":
+                y_pred_val = y_pred_val.squeeze(-1)
 
             loss = loss_fn(y_pred_val, batch.y)
 
@@ -192,6 +201,9 @@ def test_step(
 
                 test_pred = model(X)
 
+                if mode == "binary":
+                    test_pred = test_pred.squeeze(-1)
+
                 y_pred_classes = (
                     (torch.sigmoid(test_pred) > 0.5).float()
                     if mode == "binary"
@@ -209,6 +221,9 @@ def test_step(
             for batch in dataloader:
                 batch = batch.to(device)
 
+                if mode == "binary":
+                    batch.y = batch.y.float()
+
                 test_pred = model(
                     x=batch.node_attributes,
                     edge_index=batch.edge_index,
@@ -219,6 +234,9 @@ def test_step(
                     _, test_pred_val = test_pred
                 else:
                     test_pred_val = test_pred
+
+                if mode == "binary":
+                    test_pred_val = test_pred_val.squeeze(-1)
 
                 y_pred_classes = (
                     (torch.sigmoid(test_pred_val) > 0.5).float()
