@@ -64,7 +64,7 @@ class _PNA(nn.Module):
             assert num_classes is not None
             self.lin = nn.Linear(out_channels, num_classes)
 
-        init_weights(self.pna)
+        self.pna.apply(init_weights)
 
     def forward(
         self,
