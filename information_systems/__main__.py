@@ -279,49 +279,46 @@ def run_inference(args: Any) -> None:
 def run_analysis(args: Any) -> None:
     files = args.in_jsons
 
-    if len(files) > 1:
-        pass
-    else:
-        file = files[0]
+    file = files[0]
 
-        with open(file, "r") as f:
-            data = json.load(f)
-            features = data["out_features"]
-            if "predictions" in data.keys():
-                predictions = data["predictions"]
-            else:
-                predictions = []
-            if "y_hat" in data.keys():
-                labels = data["y_hat"]
-            else:
-                labels = []
+    with open(file, "r") as f:
+        data = json.load(f)
+        features = data["out_features"]
+        if "predictions" in data.keys():
+            predictions = data["predictions"]
+        else:
+            predictions = []
+        if "y_hat" in data.keys():
+            labels = data["y_hat"]
+        else:
+            labels = []
 
-        if len(args.clustering) != 0:
-            best_model, stats = clustering_trainer(
-                model_type=args.clustering,
-                graph_embeddings=features,
-                labels=labels if len(labels) > 0 else predictions,
-                num_classes=len(set(labels)),
-            )
+    if len(args.clustering) != 0:
+        best_model, stats = clustering_trainer(
+            model_type=args.clustering,
+            graph_embeddings=features,
+            labels=labels if len(labels) > 0 else predictions,
+            num_classes=len(set(labels)),
+        )
 
-            scatter_clusters(
-                model=best_model,
-                data=features,
-            )
+        scatter_clusters(
+            model=best_model,
+            data=features,
+        )
 
-            print(f"ARI score: {stats['ARI']}")
+        print(f"ARI score: {stats['ARI']}")
 
-        if len(args.manifold) != 0:
-            assert args.n_components in [
-                2,
-                3,
-            ], "Please use 2 or 3 latent embeddings for manifold learning"
-            visualize_embeddings_manifold(
-                method=args.manifold,
-                features=features,
-                labels=labels if len(labels) > 0 else predictions,
-                n_components=args.n_components,
-            )
+    if len(args.manifold) != 0:
+        assert args.n_components in [
+            2,
+            3,
+        ], "Please use 2 or 3 latent embeddings for manifold learning"
+        visualize_embeddings_manifold(
+            method=args.manifold,
+            features=features,
+            labels=labels if len(labels) > 0 else predictions,
+            n_components=args.n_components,
+        )
 
 
 def main() -> None:
@@ -614,12 +611,6 @@ def main() -> None:
         help="Select latent embeddings for manifold learning",
     )
 
-    analysis.add_argument(
-        "--stability_analysis",
-        action="store_true",
-        required=False,
-        help="Set to true to perform stability analysis. You have to provide 2 json files for this to happen.",
-    )
     analysis.set_defaults(func=run_analysis)
 
     args = parser.parse_args()
