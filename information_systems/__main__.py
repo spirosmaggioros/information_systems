@@ -246,6 +246,8 @@ def run_inference(args: Any) -> None:
         device=args.device,
     )
 
+    mode = "binary" if num_classes == 2 else "multiclass"
+
     dataloader = create_graph_dataloaders(
         graphs,
         labels,
@@ -268,7 +270,7 @@ def run_inference(args: Any) -> None:
             dataloader=dataloader,
             out_json=args.out_json,
             ground_truth_labels=labels,
-            mode="graph_classification",
+            mode=mode,
         )
 
     print(f"Results saved at {args.out_json}")
