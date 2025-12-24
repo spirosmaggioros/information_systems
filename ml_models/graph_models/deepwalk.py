@@ -136,7 +136,7 @@ class DeepWalk:
         :type filename: str
         """
         with open(filename, "wb") as f:
-            pickle.dump(self.model, f)
+            pickle.dump(self, f)
 
     def load(self, saved_model: str) -> None:
         """
@@ -146,4 +146,5 @@ class DeepWalk:
         :type saved_model: str
         """
         with open(saved_model, "rb") as f:
-            self.model = pickle.load(f)
+            loaded = pickle.load(f)
+            self.__dict__.update(loaded.__dict__)
