@@ -31,7 +31,6 @@ def train(
     :return: A tuple of (best_model, stats_dictionary)
     :rtype: Any
     """
-
     X = np.array(graph_embeddings)
     y = np.array(labels)
     scaler = StandardScaler()
@@ -57,8 +56,8 @@ def train(
             else:
                 model_params["n_neighbors"] = trial.suggest_int(
                     "n_neighbors",
-                    3,
-                    10,
+                    5,
+                    15,
                 )
             ModelClass = SpectralClusteringModel
         else:

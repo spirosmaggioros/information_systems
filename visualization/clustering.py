@@ -41,8 +41,8 @@ def scatter_clusters(
             s=50,
         )
 
-    plt.xlabel("Feature 1" if len(data[0]) <= 2 else "PC1")
-    plt.ylabel("Feature 2" if len(data[0]) <= 2 else "PC2")
+    plt.xlabel("Feature 1" if len(data[0]) >= 2 else "PC1")
+    plt.ylabel("Feature 2" if len(data[0]) >= 2 else "PC2")
     plt.title(title)
     plt.legend()
     plt.grid(True, alpha=0.3)

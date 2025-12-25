@@ -35,8 +35,8 @@ def visualize_embeddings_manifold(
     else:
         pass
 
-    if len(features[0]) > 30:
-        pca_features = PCA(n_components=30).fit_transform(features)
+    if len(features[0]) > 50:
+        pca_features = PCA(n_components=50).fit_transform(features)
         latent_features = model.fit_transform(pca_features)
     else:
         latent_features = model.fit_transform(features)

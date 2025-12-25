@@ -98,20 +98,16 @@ def get_ml_model(
             dropout=dropout,
             num_classes=num_classes,
         ).to(device),
-        "pna": (
-            _PNA(
-                task="graph_classification",
-                in_channels=in_channels,
-                hid_channels=hidden_channels,
-                out_channels=out_channels,
-                num_layers=num_layers,
-                dropout=dropout,
-                num_classes=num_classes,
-                deg_hist=deg_hist,
-            ).to(device)
-            if deg_hist is not None
-            else None
-        ),
+        "pna": _PNA(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+            deg_hist=deg_hist,
+        ).to(device),
         "graph2vec": Graph2Vec(
             dimensions=out_channels,
         ),
@@ -534,14 +530,6 @@ def main() -> None:
         type=str,
         required=True,
         help="[REQUIRED] Absolute path of the model weights",
-    )
-
-    inference.add_argument(
-        "--num_layers",
-        type=int,
-        default=4,
-        required=False,
-        help="Only for torch geometric: Specify the number of convolutional layers of torch geometric models",
     )
 
     inference.add_argument(

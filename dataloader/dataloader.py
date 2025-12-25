@@ -239,6 +239,7 @@ def create_graph_dataloaders(
             labels,
             random_state=42,
             test_size=test_size,
+            stratify=labels,
         )
         train_loader = GraphDataloader(
             mode="train", data=X_train, labels=y_train, device=device

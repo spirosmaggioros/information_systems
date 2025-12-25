@@ -60,7 +60,7 @@ class _GIN(nn.Module):
             assert num_classes is not None
             self.lin = nn.Linear(out_channels, num_classes)
 
-        init_weights(self.gin)
+        self.gin.apply(init_weights)
 
     def forward(
         self,

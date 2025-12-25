@@ -34,6 +34,7 @@ def inference(
     :type out_json: str
     """
     load_torch_model(model, model_weights, device)
+    model.eval()
 
     y_preds = []
     y_features = []
