@@ -39,6 +39,7 @@ class SpectralClusteringModel:
             gamma=self.gamma,
             n_neighbors=self.n_neighbors,
             random_state=self.random_state,
+            assign_labels="cluster_qr",
         )
 
     def fit(self, X: List) -> None:
