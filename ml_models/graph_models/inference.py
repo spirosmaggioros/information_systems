@@ -1,5 +1,6 @@
 import json
 import time
+from itertools import chain
 from typing import Any, List, Optional
 
 import networkx as nx
@@ -26,17 +27,24 @@ def inference(
     """
     model.load(model_weights)
 
-    start_time = time.time()
-    out_features = model.infer(data).tolist()
-    end_time = time.time()
+    out_features = []
+    time_per_data = []
+
+    for graph in data:
+        start_time = time.time()
+        pred = model.infer([graph]).tolist()
+        end_time = time.time()
+
+        time_per_data.append(end_time - start_time)
+        out_features.append(list(chain.from_iterable(pred)))
 
     inference_res = {
         "out_features": out_features,
         "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
-        "time": end_time - start_time,
+        "time": time_per_data,
     }
 
     with open(out_json, "w") as f:
         json.dump(inference_res, f, indent=4)
 
-    return list(out_features)
+    return out_features
