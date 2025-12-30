@@ -558,12 +558,6 @@ def main() -> None:
         help="Only for torch geometric: Specify the dimensionality of output features",
     )
 
-    inference.add_argument(
-        "--num_layers",
-        type=int,
-        required=True,
-        help="Only for torch geometric: Specify the number of layers",
-    )
 
     inference.add_argument(
         "--dropout",
