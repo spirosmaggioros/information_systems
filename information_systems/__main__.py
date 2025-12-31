@@ -537,14 +537,6 @@ def main() -> None:
     )
 
     inference.add_argument(
-        "--num_layers",
-        type=int,
-        default=4,
-        required=False,
-        help="Only for torch geometric: Specify the number of convolutional layers of torch geometric models",
-    )
-
-    inference.add_argument(
         "--hidden_channels",
         type=int,
         default=0,
@@ -558,6 +550,14 @@ def main() -> None:
         default=0,
         required=False,
         help="Only for torch geometric: Specify the dimensionality of output features",
+    )
+
+    inference.add_argument(
+        "--num_layers",
+        type=int,
+        default=4,
+        required=False,
+        help="Only for torch geometric: Specify the number of convolutional layers of torch geometric models",
     )
 
     inference.add_argument(
