@@ -557,7 +557,7 @@ def main() -> None:
         type=int,
         default=4,
         required=False,
-        help="Only for torch geometric: Specify the number of convolutional layers of torch geometric models",
+        help="Only for torch geometric: Specify the number of layers",
     )
 
     inference.add_argument(
