@@ -170,7 +170,7 @@ def run_train(args: Any) -> None:
         ), "Please select an available classifier model"
         assert args.epochs > 0
 
-        _, metrics = graph_trainer(
+        _, results = graph_trainer(
             graph_model=args.model,
             graphs=graphs,
             labels=labels,
@@ -199,7 +199,7 @@ def run_train(args: Any) -> None:
             loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adadelta(model.parameters(), lr=0.1)
 
-        _, metrics = dl_trainer(
+        results, _ = dl_trainer(
             model=model,
             model_type="torch_geometric",
             mode="binary" if num_classes == 2 else "multiclass",
@@ -217,7 +217,7 @@ def run_train(args: Any) -> None:
             log_filename=args.log_filename,
         )
 
-    print(f"Training metrics: {metrics}")
+    print(f"Training metrics: {results}")
 
 
 def run_inference(args: Any) -> None:

@@ -92,8 +92,8 @@ def train_step(
             torch.cuda.synchronize()
 
             if device == "cuda":
-                stats["peak_mem_mb"] = max(
-                    stats["peak_mem_mb"],
+                stats["train_peak_mem_mb"] = max(
+                    stats["train_peak_mem_mb"],
                     torch.cuda.max_memory_allocated(device=None) / (1024**2),
                 )
 
@@ -144,8 +144,8 @@ def train_step(
             optimizer.step()
 
             if device == "cuda":
-                stats["peak_mem_mb"] = max(
-                    stats["peak_mem_mb"],
+                stats["train_peak_mem_mb"] = max(
+                    stats["train_peak_mem_mb"],
                     torch.cuda.max_memory_allocated(device=None) / (1024**2),
                 )
 
@@ -324,6 +324,7 @@ def train(
         "train_precision": [],
         "train_specificity": [],
         "train_f1": [],
+        "train_peak_mem_mb": 0.0,
         "test_acc": [],
         "test_auc": [],
         "test_recall": [],
@@ -404,6 +405,7 @@ def train(
             f"train_precision: {train_stats['train_precision']:.4f} | "
             f"train_specificity: {train_stats['train_specificity']:.4f} | "
             f"train_f1: {train_stats['train_f1']:.4f} | "
+            f"train_peak_mem_mb: {train_stats['train_peak_mem_mb']}MB | "
             f"test_acc: {test_stats['test_acc']:.4f} | "
             f"test_auc: {test_stats['test_auc']:.4f} | "
             f"test_recall: {test_stats['test_recall']:.4f} | "
@@ -419,6 +421,9 @@ def train(
         results["train_precision"].append(train_stats["train_precision"])
         results["train_specificity"].append(train_stats["train_specificity"])
         results["train_f1"].append(train_stats["train_f1"])
+        results["train_peak_mem_mb"] = max(
+            results["train_peak_mem_mb"], train_stats["train_peak_mem_mb"]
+        )
         results["test_acc"].append(test_stats["test_acc"])
         results["test_auc"].append(test_stats["test_auc"])
         results["test_recall"].append(test_stats["test_recall"])
