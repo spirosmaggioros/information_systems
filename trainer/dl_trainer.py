@@ -38,6 +38,7 @@ def train_step(
         "train_precision": 0.0,
         "train_specificity": 0.0,
         "train_f1": 0.0,
+        "train_peak_mem_mb": 0.0,
     }
 
     if mode == "multiclass":
@@ -71,6 +72,10 @@ def train_step(
             else:
                 X, y = X.float(), y.long()
 
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats(device=None)
+                torch.cuda.synchronize()
+
             optimizer.zero_grad()
 
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
@@ -83,6 +88,14 @@ def train_step(
             loss.backward()
 
             optimizer.step()
+
+            torch.cuda.synchronize()
+
+            if device == "cuda":
+                stats["peak_mem_mb"] = max(
+                    stats["peak_mem_mb"],
+                    torch.cuda.max_memory_allocated(device=None) / (1024**2),
+                )
 
             y_pred_classes = (
                 (torch.sigmoid(y_pred) > 0.5).float()
@@ -102,6 +115,10 @@ def train_step(
 
             if mode == "binary":
                 batch.y = batch.y.float()
+
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats(device=None)
+                torch.cuda.synchronize()
 
             optimizer.zero_grad()
 
@@ -125,6 +142,12 @@ def train_step(
             loss.backward()
 
             optimizer.step()
+
+            if device == "cuda":
+                stats["peak_mem_mb"] = max(
+                    stats["peak_mem_mb"],
+                    torch.cuda.max_memory_allocated(device=None) / (1024**2),
+                )
 
             y_pred_classes = (
                 (torch.sigmoid(y_pred_val) > 0.5).float()

@@ -39,16 +39,18 @@ def inference(
     y_preds = []
     y_features = []
     time_per_data = []
+
     with torch.no_grad():
         for batch in dataloader:
             batch = batch.to(device)
 
             start = time.time()
-            y_pred = model(
-                x=batch.node_attributes,
-                edge_index=batch.edge_index,
-                batch=batch.batch,
-            )
+            with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                y_pred = model(
+                    x=batch.node_attributes,
+                    edge_index=batch.edge_index,
+                    batch=batch.batch,
+                )
             if isinstance(y_pred, tuple):
                 y_pred_features, y_pred_val = y_pred
             else:
