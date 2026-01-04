@@ -73,7 +73,8 @@ def train_step(
 
             optimizer.zero_grad()
 
-            y_pred = model(X)
+            with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                y_pred = model(X)
 
             if mode == "binary":
                 y_pred = y_pred.squeeze(-1)
@@ -104,9 +105,13 @@ def train_step(
 
             optimizer.zero_grad()
 
-            y_pred = model(
-                x=batch.node_attributes, edge_index=batch.edge_index, batch=batch.batch
-            )
+            with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                y_pred = model(
+                    x=batch.node_attributes,
+                    edge_index=batch.edge_index,
+                    batch=batch.batch,
+                )
+
             if isinstance(y_pred, tuple):
                 _, y_pred_val = y_pred
             else:
@@ -199,7 +204,8 @@ def test_step(
                 else:
                     X, y = X.float(), y.long()
 
-                test_pred = model(X)
+                with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                    test_pred = model(X)
 
                 if mode == "binary":
                     test_pred = test_pred.squeeze(-1)
@@ -224,11 +230,12 @@ def test_step(
                 if mode == "binary":
                     batch.y = batch.y.float()
 
-                test_pred = model(
-                    x=batch.node_attributes,
-                    edge_index=batch.edge_index,
-                    batch=batch.batch,
-                )
+                with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                    test_pred = model(
+                        x=batch.node_attributes,
+                        edge_index=batch.edge_index,
+                        batch=batch.batch,
+                    )
 
                 if isinstance(test_pred, tuple):
                     _, test_pred_val = test_pred
