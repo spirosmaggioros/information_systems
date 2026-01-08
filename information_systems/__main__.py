@@ -71,34 +71,43 @@ def get_ml_model(
     deg_hist: Optional[torch.Tensor] = None,
 ) -> nn.Module:
     name_to_model = {
-        "gcn": GCN(
-            task="graph_classification",
-            in_channels=in_channels,
-            hid_channels=hidden_channels,
-            out_channels=out_channels,
-            num_layers=num_layers,
-            dropout=dropout,
-            num_classes=num_classes,
-        ).to(device),
-        "gat": GAT(
-            task="graph_classification",
-            in_channels=in_channels,
-            hid_channels=hidden_channels,
-            out_channels=out_channels,
-            num_layers=num_layers,
-            dropout=dropout,
-            num_classes=num_classes,
-        ).to(device),
-        "gin": _GIN(
-            task="graph_classification",
-            in_channels=in_channels,
-            hid_channels=hidden_channels,
-            out_channels=out_channels,
-            num_layers=num_layers,
-            dropout=dropout,
-            num_classes=num_classes,
-        ).to(device),
-        "pna": (
+        "gcn": torch.compile(
+            GCN(
+                task="graph_classification",
+                in_channels=in_channels,
+                hid_channels=hidden_channels,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                dropout=dropout,
+                num_classes=num_classes,
+            ).to(device),
+            dynamic=False,
+        ),
+        "gat": torch.compile(
+            GAT(
+                task="graph_classification",
+                in_channels=in_channels,
+                hid_channels=hidden_channels,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                dropout=dropout,
+                num_classes=num_classes,
+            ).to(device),
+            dynamic=False,
+        ),
+        "gin": torch.compile(
+            _GIN(
+                task="graph_classification",
+                in_channels=in_channels,
+                hid_channels=hidden_channels,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                dropout=dropout,
+                num_classes=num_classes,
+            ).to(device),
+            dynamic=False,
+        ),
+        "pna": torch.compile(
             _PNA(
                 task="graph_classification",
                 in_channels=in_channels,
@@ -108,9 +117,8 @@ def get_ml_model(
                 dropout=dropout,
                 num_classes=num_classes,
                 deg_hist=deg_hist,
-            ).to(device)
-            if deg_hist is not None
-            else None
+            ).to(device),
+            dynamic=False,
         ),
         "graph2vec": Graph2Vec(
             dimensions=out_channels,
@@ -155,19 +163,6 @@ def run_train(args: Any) -> None:
         deg_hist=deg_hist,
         device=args.device,
     )
-
-    if args.shuffle_node_attributes:
-        for graph in graphs:
-            shuffle_node_attributes(graph)
-    if args.add_random_edges > 0.0:
-        assert (
-            args.remove_random_edges == 0.0
-        ), "We suggest to notuse add_random_edges or remove_random_edges together for stability analysis"
-        for graph in graphs:
-            add_random_edges(graph, args.add_random_edges)
-    if args.remove_random_edges > 0.0:
-        for graph in graphs:
-            remove_random_edges(graph, args.remove_random_edges)
 
     if args.model in GRAPH_MODELS:
         assert (
@@ -250,14 +245,18 @@ def run_inference(args: Any) -> None:
         device=args.device,
     )
 
-    mode = "binary" if num_classes == 2 else "multiclass"
-
-    dataloader = create_graph_dataloaders(
-        graphs,
-        labels,
-        batch_size=1,
-        test_size=0.0,
-    )
+    if args.shuffle_node_attributes:
+        for graph in graphs:
+            shuffle_node_attributes(graph)
+    if args.add_random_edges > 0.0:
+        assert (
+            args.remove_random_edges == 0.0
+        ), "We suggest to notuse add_random_edges or remove_random_edges together for stability analysis"
+        for graph in graphs:
+            add_random_edges(graph, args.add_random_edges)
+    if args.remove_random_edges > 0.0:
+        for graph in graphs:
+            remove_random_edges(graph, args.remove_random_edges)
 
     if args.model in ["graph2vec", "netlsd", "deepwalk"]:
         graph_model_inference(
@@ -268,6 +267,15 @@ def run_inference(args: Any) -> None:
             ground_truth_labels=labels,
         )
     else:
+        mode = "binary" if num_classes == 2 else "multiclass"
+
+        dataloader = create_graph_dataloaders(
+            graphs,
+            labels,
+            batch_size=1,
+            test_size=0.0,
+        )
+
         torch_geometric_inference(
             model=model,
             model_weights=args.model_weights,
@@ -390,7 +398,7 @@ def main() -> None:
     train.add_argument(
         "--test_size",
         type=float,
-        default=0.2,
+        default=0.25,
         required=False,
         help="Specify the percentage of data that will be used for testing(default = 0.2)",
     )
@@ -484,26 +492,6 @@ def main() -> None:
     )
 
     train.add_argument(
-        "--shuffle_node_attributes",
-        action="store_true",
-        help="If set, then node attributes for each graph in the dataset will be shuffled. Used for embedding stability analysis",
-    )
-
-    train.add_argument(
-        "--add_random_edges",
-        type=float,
-        default=0.0,
-        help="If set, a random p%(only new edges) of the total edges of each graph will be added",
-    )
-
-    train.add_argument(
-        "--remove_random_edges",
-        type=float,
-        default=0.0,
-        help="If set, a random p% of the total edges of each graph will be removed",
-    )
-
-    train.add_argument(
         "--log_filename",
         type=str,
         required=False,
@@ -581,6 +569,26 @@ def main() -> None:
         default="cpu",
         required=False,
         help="Specify the device to train(only for torch geometric, either cpu, mps or cuda). Note that mps might have some bugs",
+    )
+
+    inference.add_argument(
+        "--shuffle_node_attributes",
+        action="store_true",
+        help="If set, then node attributes for each graph in the dataset will be shuffled. Used for embedding stability analysis",
+    )
+
+    inference.add_argument(
+        "--add_random_edges",
+        type=float,
+        default=0.0,
+        help="If set, a random p%(only new edges) of the total edges of each graph will be added",
+    )
+
+    inference.add_argument(
+        "--remove_random_edges",
+        type=float,
+        default=0.0,
+        help="If set, a random p% of the total edges of each graph will be removed",
     )
     inference.set_defaults(func=run_inference)
 
