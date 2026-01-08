@@ -53,11 +53,11 @@ def inference(
 
     peak_memory_mb = peak / (1024 * 1024)
 
-
     inference_res = {
         "out_features": out_features,
         "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
         "time": time_per_data,
+        "peak_memory_mb": peak_memory_mb,
     }
 
     with open(out_json, "w") as f:
