@@ -39,10 +39,14 @@ def inference(
     y_preds = []
     y_features = []
     time_per_data = []
+    mem_allocated = []
 
     with torch.no_grad():
         for batch in dataloader:
             batch = batch.to(device)
+
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats(device=None)
 
             start = time.time()
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
@@ -66,12 +70,16 @@ def inference(
 
             y_preds.append(y_pred_classes.cpu().flatten().tolist()[0])
             y_features.append(y_pred_features.cpu().flatten().tolist())
+            mem_allocated.append(
+                torch.cuda.max_memory_allocated(device=None) / (1024**2)
+            )
 
     if out_json != "":
         inference_res = {
             "predictions": y_preds,
             "out_features": y_features,
             "y_hat": ground_truth_labels if ground_truth_labels is not None else [],
+            "mem_allocated_per_data": mem_allocated,
             "time": time_per_data,
         }
 

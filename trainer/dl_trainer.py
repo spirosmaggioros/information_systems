@@ -92,6 +92,9 @@ def train_step(
             torch.cuda.synchronize()
 
             if device == "cuda":
+                print(
+                    f"Total mem: {torch.cuda.max_memory_allocated(device=None) / (1024**2)}"
+                )
                 stats["train_peak_mem_mb"] = max(
                     stats["train_peak_mem_mb"],
                     torch.cuda.max_memory_allocated(device=None) / (1024**2),
