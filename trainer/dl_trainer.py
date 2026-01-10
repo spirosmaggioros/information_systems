@@ -38,6 +38,7 @@ def train_step(
         "train_precision": 0.0,
         "train_specificity": 0.0,
         "train_f1": 0.0,
+        "train_peak_mem_mb": 0.0,
     }
 
     if mode == "multiclass":
@@ -71,6 +72,10 @@ def train_step(
             else:
                 X, y = X.float(), y.long()
 
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats(device=None)
+                torch.cuda.synchronize()
+
             optimizer.zero_grad()
 
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
@@ -83,6 +88,14 @@ def train_step(
             loss.backward()
 
             optimizer.step()
+
+            torch.cuda.synchronize()
+
+            if device == "cuda":
+                stats["train_peak_mem_mb"] = max(
+                    stats["train_peak_mem_mb"],
+                    torch.cuda.max_memory_allocated(device=None) / (1024**2),
+                )
 
             y_pred_classes = (
                 (torch.sigmoid(y_pred) > 0.5).float()
@@ -102,6 +115,10 @@ def train_step(
 
             if mode == "binary":
                 batch.y = batch.y.float()
+
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats(device=None)
+                torch.cuda.synchronize()
 
             optimizer.zero_grad()
 
@@ -125,6 +142,12 @@ def train_step(
             loss.backward()
 
             optimizer.step()
+
+            if device == "cuda":
+                stats["train_peak_mem_mb"] = max(
+                    stats["train_peak_mem_mb"],
+                    torch.cuda.max_memory_allocated(device=None) / (1024**2),
+                )
 
             y_pred_classes = (
                 (torch.sigmoid(y_pred_val) > 0.5).float()
@@ -301,6 +324,7 @@ def train(
         "train_precision": [],
         "train_specificity": [],
         "train_f1": [],
+        "train_peak_mem_mb": 0.0,
         "test_acc": [],
         "test_auc": [],
         "test_recall": [],
@@ -381,6 +405,7 @@ def train(
             f"train_precision: {train_stats['train_precision']:.4f} | "
             f"train_specificity: {train_stats['train_specificity']:.4f} | "
             f"train_f1: {train_stats['train_f1']:.4f} | "
+            f"train_peak_mem_mb: {train_stats['train_peak_mem_mb']}MB | "
             f"test_acc: {test_stats['test_acc']:.4f} | "
             f"test_auc: {test_stats['test_auc']:.4f} | "
             f"test_recall: {test_stats['test_recall']:.4f} | "
@@ -396,6 +421,9 @@ def train(
         results["train_precision"].append(train_stats["train_precision"])
         results["train_specificity"].append(train_stats["train_specificity"])
         results["train_f1"].append(train_stats["train_f1"])
+        results["train_peak_mem_mb"] = max(
+            results["train_peak_mem_mb"], train_stats["train_peak_mem_mb"]
+        )
         results["test_acc"].append(test_stats["test_acc"])
         results["test_auc"].append(test_stats["test_auc"])
         results["test_recall"].append(test_stats["test_recall"])
