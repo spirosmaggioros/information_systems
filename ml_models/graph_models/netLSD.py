@@ -1,4 +1,5 @@
-from typing import Tuple, Union
+import pickle
+from typing import List, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -50,6 +51,18 @@ class NetLSD:
         self.eigenvalues = eigenvalues
         self.normalization = normalization
         self.normalized_laplacian = normalized_laplacian
+
+    def infer(self, graphs: List[nx.Graph]) -> np.ndarray:
+        """
+        Infer embeddings for a list of new graphs.
+
+        :param graphs: List of NetworkX graphs
+        :type graphs: List[nx.Graph]
+        :returns: Graph embeddings (Num_Graphs x Num_Timescales)
+        :rtype: np.ndarray
+        """
+        embeddings = [self.fit_transform(g) for g in graphs]
+        return np.array(embeddings)
 
     def compare(self, descriptor1: np.ndarray, descriptor2: np.ndarray) -> float:
         """
@@ -285,3 +298,24 @@ class NetLSD:
             else:
                 return wkt / (1 + (nv - 1) * np.cos(nv * timescales))
         return wkt
+
+    def save(self, filename: str) -> None:
+        """
+        Saves trained model in .pkl format
+
+        :param filename: The filename(.pkl suffix) of pre-trained model
+        :type filename: str
+        """
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+
+    def load(self, saved_model: str) -> None:
+        """
+        Load model weights to self model
+
+        :param saved_model: Absolute path to the saved model .pkl file
+        :type saved_model: str
+        """
+        with open(saved_model, "rb") as f:
+            loaded_obj = pickle.load(f)
+            self.__dict__.update(loaded_obj.__dict__)

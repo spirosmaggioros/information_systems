@@ -527,28 +527,32 @@ def main() -> None:
     inference.add_argument(
         "--hidden_channels",
         type=int,
-        required=True,
+        default=0,
+        required=False,
         help="Only for torch geometric: Specify the number of hidden channels",
     )
 
     inference.add_argument(
         "--out_channels",
         type=int,
-        required=True,
+        default=0,
+        required=False,
         help="Only for torch geometric: Specify the dimensionality of output features",
     )
 
     inference.add_argument(
         "--num_layers",
         type=int,
-        required=True,
+        default=4,
+        required=False,
         help="Only for torch geometric: Specify the number of layers",
     )
 
     inference.add_argument(
         "--dropout",
         type=float,
-        required=True,
+        default=0,
+        required=False,
         help="Only for torch geometric: Specify the dropout value for each convolutional layer of torch geometric models",
     )
 
