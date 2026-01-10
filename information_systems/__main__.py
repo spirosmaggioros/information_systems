@@ -71,55 +71,43 @@ def get_ml_model(
     deg_hist: Optional[torch.Tensor] = None,
 ) -> nn.Module:
     name_to_model = {
-        "gcn": torch.compile(
-            GCN(
-                task="graph_classification",
-                in_channels=in_channels,
-                hid_channels=hidden_channels,
-                out_channels=out_channels,
-                num_layers=num_layers,
-                dropout=dropout,
-                num_classes=num_classes,
-            ).to(device),
-            dynamic=False,
-        ),
-        "gat": torch.compile(
-            GAT(
-                task="graph_classification",
-                in_channels=in_channels,
-                hid_channels=hidden_channels,
-                out_channels=out_channels,
-                num_layers=num_layers,
-                dropout=dropout,
-                num_classes=num_classes,
-            ).to(device),
-            dynamic=False,
-        ),
-        "gin": torch.compile(
-            _GIN(
-                task="graph_classification",
-                in_channels=in_channels,
-                hid_channels=hidden_channels,
-                out_channels=out_channels,
-                num_layers=num_layers,
-                dropout=dropout,
-                num_classes=num_classes,
-            ).to(device),
-            dynamic=False,
-        ),
-        "pna": torch.compile(
-            _PNA(
-                task="graph_classification",
-                in_channels=in_channels,
-                hid_channels=hidden_channels,
-                out_channels=out_channels,
-                num_layers=num_layers,
-                dropout=dropout,
-                num_classes=num_classes,
-                deg_hist=deg_hist,
-            ).to(device),
-            dynamic=False,
-        ),
+        "gcn": GCN(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+        ).to(device),
+        "gat": GAT(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+        ).to(device),
+        "gin": _GIN(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+        ).to(device),
+        "pna": _PNA(
+            task="graph_classification",
+            in_channels=in_channels,
+            hid_channels=hidden_channels,
+            out_channels=out_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            num_classes=num_classes,
+            deg_hist=deg_hist,
+        ).to(device),
         "graph2vec": Graph2Vec(
             dimensions=out_channels,
         ),
@@ -170,7 +158,7 @@ def run_train(args: Any) -> None:
         ), "Please select an available classifier model"
         assert args.epochs > 0
 
-        _, metrics = graph_trainer(
+        _, results = graph_trainer(
             graph_model=args.model,
             graphs=graphs,
             labels=labels,
@@ -199,7 +187,7 @@ def run_train(args: Any) -> None:
             loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adadelta(model.parameters(), lr=0.1)
 
-        _, metrics = dl_trainer(
+        results, _ = dl_trainer(
             model=model,
             model_type="torch_geometric",
             mode="binary" if num_classes == 2 else "multiclass",
@@ -217,7 +205,7 @@ def run_train(args: Any) -> None:
             log_filename=args.log_filename,
         )
 
-    print(f"Training metrics: {metrics}")
+    print(f"Training metrics: {results}")
 
 
 def run_inference(args: Any) -> None:
