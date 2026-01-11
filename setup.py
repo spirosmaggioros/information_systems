@@ -22,9 +22,13 @@ setup(
     install_requires=[
         "networkx",
         "torchvision",
+        "torch-geometric",
+        "karateclub",
         "tqdm",
         "numpy",
         "pandas",
+        "scipy<1.13.0",
+        "scikit-learn",
     ],
     entry_points={
         "console_scripts": ["information_systems = information_systems.__main__:main"]

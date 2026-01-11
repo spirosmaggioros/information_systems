@@ -1,9 +1,12 @@
+scipy>=1.1.0.0,<1.13.0
 torch==2.6.0
-torch-geometric
+torch-geometric==2.7.0
 optuna
-karateclub
+karateclub==1.3.3
 networkx
 scikit-learn
 torchsummary
 matplotlib
 grave
+torchmetrics
+gensim==4.3.2
