@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -28,6 +28,7 @@ def train_complete_classifier(
     classifier: str = "SVC",
     device: str = "mps",
     save_model: bool = False,
+    model_name: Optional[str] = None,
 ) -> dict:
     """
     Trains the passed classifier on graph embeddings computed by a graph model
@@ -39,6 +40,9 @@ def train_complete_classifier(
         metrics["AUROC"] = stats["AUC"]
         metrics["F1"] = stats["F1"]
         metrics["Accuracy"] = stats["Accuracy"]
+
+        if save_model:
+            clf.save(model_name)
     else:
         train_ds = MLPDataset(X_train, y_train)
         val_ds = MLPDataset(X_test, y_test)
@@ -73,6 +77,7 @@ def train_complete_classifier(
             mode=mode,
             device=device,
             save_model=save_model,
+            model_name=model_name if model_name is not None else "test.pth",
         )
 
         metrics["AUROC"] = best_stats["test_auc"]

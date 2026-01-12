@@ -28,6 +28,7 @@ from ml_models.torch_geometric.pna import _PNA
 from trainer.clustering_trainer import train as clustering_trainer
 from trainer.dl_trainer import train as dl_trainer
 from trainer.graph_trainer import train as graph_trainer
+from trainer.graph_trainer import train_complete_classifier
 from visualization.clustering import scatter_clusters
 from visualization.manifold import visualize_embeddings_manifold
 
@@ -321,6 +322,41 @@ def run_analysis(args: Any) -> None:
         )
 
 
+def run_train_classifier(args: Any) -> None:
+    assert args.classifier in ["SVC", "MLP"]
+
+    data = ds_to_graphs(dataset_folder=args.dataset_dir)
+    labels = data["graph_classes"]
+    num_classes = len(set(labels))
+
+    with open(args.out_embeddings, "r") as f:
+        data = json.load(f)
+        out_features = data["out_features"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        out_features,
+        labels,
+        test_size=0.25,
+        random_state=42,
+        stratify=labels,
+    )
+
+    metrics = train_complete_classifier(
+        X_train=X_train,
+        X_test=X_test,
+        y_train=y_train,
+        y_test=y_test,
+        classifier=args.classifier,
+        num_classes=1 if num_classes == 2 else num_classes,
+        mode="binary" if num_classes == 2 else "multiclass",
+        device=args.device,
+        save_model=True,
+        model_name=args.model_name,
+    )
+
+    print(metrics)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="information_systems",
@@ -388,7 +424,7 @@ def main() -> None:
         type=float,
         default=0.25,
         required=False,
-        help="Specify the percentage of data that will be used for testing(default = 0.2)",
+        help="Specify the percentage of data that will be used for testing(default = 0.25)",
     )
 
     train.add_argument(
@@ -614,8 +650,57 @@ def main() -> None:
         required=False,
         help="Select latent embeddings for manifold learning",
     )
-
     analysis.set_defaults(func=run_analysis)
+
+    # train an MLP or SVM on output embeddings, this is just a helper
+    train_classifier = subparsers.add_parser(
+        "train_classifier",
+        help="Trains a classifier only(SVM, MLP) on passed out embeddings",
+    )
+
+    train_classifier.add_argument(
+        "--classifier",
+        type=str,
+        required=True,
+        help="[REQUIRED] Either SVC or MLP",
+    )
+
+    train_classifier.add_argument(
+        "--dataset_dir",
+        type=str,
+        required=True,
+        help="[REQUIRED] Select a dataset to train on. We currently support a specific amount of datasets, please read README for more information",
+    )
+
+    train_classifier.add_argument(
+        "--out_embeddings",
+        type=str,
+        required=True,
+        help="Out embeddings to train on",
+    )
+
+    train_classifier.add_argument(
+        "--test_size",
+        type=float,
+        default=0.25,
+        required=False,
+        help="Specify the percentage of data that will be used for testing(default = 0.25)",
+    )
+
+    train_classifier.add_argument(
+        "--model_name",
+        type=str,
+        required=True,
+        help="provide model name for the SVM/MLP model",
+    )
+
+    train_classifier.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        required=False,
+    )
+    train_classifier.set_defaults(func=run_train_classifier)
 
     args = parser.parse_args()
     args.func(args)

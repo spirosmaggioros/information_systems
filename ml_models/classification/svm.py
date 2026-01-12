@@ -1,3 +1,4 @@
+import pickle
 from typing import Any, List
 
 from sklearn.svm import SVC
@@ -95,6 +96,17 @@ class SVMModel:
         :return: Prediction probabilities
         """
         return self.model.predict_proba(X)  # type: ignore
+
+    def save(self, filename: str) -> None:
+        """
+        Saves trained model in .pkl format
+
+        :param filename: The filename(.pkl suffix) of pre-trained model
+        :type filename: str
+        """
+
+        with open(filename, "wb") as f:
+            pickle.dump(self.model, f)
 
     def get_model(self) -> Any:
         """
