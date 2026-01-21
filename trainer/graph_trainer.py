@@ -29,6 +29,7 @@ def train_complete_classifier(
     device: str = "mps",
     save_model: bool = False,
     model_name: Optional[str] = None,
+    n_trials: int = 50,
 ) -> dict:
     """
     Trains the passed classifier on graph embeddings computed by a graph model
@@ -36,7 +37,12 @@ def train_complete_classifier(
     clf = None
     metrics = {"AUROC": 0.0, "F1": 0.0, "Accuracy": 0.0}
     if classifier == "SVC":
-        clf, stats = train_svm(mode=mode, graph_embeddings=X_train, labels=y_train)
+        clf, stats = train_svm(
+            mode=mode,
+            graph_embeddings=X_train,
+            labels=y_train,
+            n_trials=n_trials,
+        )
         metrics["AUROC"] = stats["AUC"]
         metrics["F1"] = stats["F1"]
         metrics["Accuracy"] = stats["Accuracy"]

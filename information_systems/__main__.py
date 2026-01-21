@@ -352,6 +352,7 @@ def run_train_classifier(args: Any) -> None:
         device=args.device,
         save_model=True,
         model_name=args.model_name,
+        n_trials=args.n_trials,
     )
 
     print(metrics)
@@ -692,6 +693,14 @@ def main() -> None:
         type=str,
         required=True,
         help="provide model name for the SVM/MLP model",
+    )
+
+    train_classifier.add_argument(
+        "--n_trials",
+        type=int,
+        default=50,
+        required=False,
+        help="Number of optuna trials to train a classifier",
     )
 
     train_classifier.add_argument(

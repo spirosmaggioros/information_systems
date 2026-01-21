@@ -15,6 +15,7 @@ def train(
     graph_embeddings: list,
     labels: list,
     mode: str,
+    n_trials: int = 50,
 ) -> Any:
     """
     SVC trainer
@@ -24,7 +25,7 @@ def train(
     :param labels: Labels of graphs/nodes for each graph embedding
     :type labels: list
 
-    :return: The best estima"tor of the optuna study
+    :return: The best estimator of the optuna study
     """
 
     X_train, X_val, y_train, y_val = train_test_split(
@@ -67,7 +68,7 @@ def train(
         return float(scores["test_f1_macro"].mean())
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=n_trials)
 
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
