@@ -1,4 +1,5 @@
 import ast
+import tracemalloc
 from typing import Any, Dict, List, Tuple, Union
 
 import networkx as nx
@@ -8,7 +9,6 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader
-import tracemalloc
 
 from ml_models.classification.mlp import MLP, MLPDataset
 from ml_models.graph_models.deepwalk import DeepWalk
