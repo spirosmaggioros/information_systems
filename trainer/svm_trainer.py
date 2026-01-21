@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import optuna
 from sklearn.model_selection import cross_validate, train_test_split
@@ -15,6 +15,7 @@ def train(
     graph_embeddings: list,
     labels: list,
     mode: str,
+    classifier_name: Optional[str] = None,
 ) -> Any:
     """
     SVC trainer
@@ -37,7 +38,7 @@ def train(
 
     def objective(trial: Any) -> float:
         kernel = trial.suggest_categorical("kernel", ["rbf", "linear"])
-        svc_c = trial.suggest_float("C", 1e-10, 1e10, log=True)
+        svc_c = trial.suggest_float("C", 1e-10, 10, log=True)
         model = SVMModel(
             mode=mode,
             C=svc_c,
@@ -88,5 +89,8 @@ def train(
     stats = compute_metrics(
         y_preds=y_preds, y_hat=y_val, mode=mode, y_preds_proba=y_preds_proba
     )
+
+    if classifier_name is not None:
+        best_model.save(classifier_name)
 
     return best_model, stats
