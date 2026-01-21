@@ -8,6 +8,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader
+import tracemalloc
 
 from ml_models.classification.mlp import MLP, MLPDataset
 from ml_models.graph_models.deepwalk import DeepWalk
@@ -125,7 +126,10 @@ def train(
     assert len(graphs) == len(labels), "Number of graphs must match number of labels"
     assert len(graphs) > 0, "Graph list cannot be empty"
 
+    tracemalloc.start()
+
     def objective(trial: Any) -> float:
+        tracemalloc.reset_peak()
         if graph_model == "graph2vec":
             wl_iterations = trial.suggest_categorical(
                 "wl_iterations", [x for x in range(2, 5)]
@@ -254,11 +258,16 @@ def train(
             device=device,
             save_model=False,
         )
+
+        _, peak = tracemalloc.get_traced_memory()
+        peak_memory_mb = peak / (1024 * 1024)
+
         checkpoint = {
             "trial_params": trial.params,
             "F1": metrics["F1"],
             "AUROC": metrics["AUROC"],
             "Accuracy": metrics["Accuracy"],
+            "peak_memory_mb": peak_memory_mb,
         }
         trial.set_user_attr("checkpoint", checkpoint)
 
@@ -344,5 +353,8 @@ def train(
         device=device,
         save_model=False,
     )
+
+    tracemalloc.stop()
+    print(f"Best Hyperparams Peak Memory: {best_checkpoint['peak_memory_mb']:.2f} MB")
 
     return best_model, metrics
