@@ -1,6 +1,6 @@
 import ast
 import tracemalloc
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -29,6 +29,7 @@ def train_complete_classifier(
     classifier: str = "SVC",
     device: str = "mps",
     save_model: bool = False,
+    classifier_name: Optional[str] = None,
 ) -> dict:
     """
     Trains the passed classifier on graph embeddings computed by a graph model
@@ -36,7 +37,14 @@ def train_complete_classifier(
     clf = None
     metrics = {"AUROC": 0.0, "F1": 0.0, "Accuracy": 0.0}
     if classifier == "SVC":
-        clf, stats = train_svm(mode=mode, graph_embeddings=X_train, labels=y_train)
+        if classifier_name is not None:
+            assert ".pkl" in classifier_name
+        clf, stats = train_svm(
+            mode=mode,
+            graph_embeddings=X_train,
+            labels=y_train,
+            classifier_name=classifier_name,
+        )
         metrics["AUROC"] = stats["AUC"]
         metrics["F1"] = stats["F1"]
         metrics["Accuracy"] = stats["Accuracy"]
@@ -63,6 +71,9 @@ def train_complete_classifier(
             amsgrad=True,
         )
 
+        if classifier_name is not None:
+            assert ".pth" in classifier_name
+
         _, best_stats = train_dl(
             model=clf,
             model_type="torch",
@@ -73,6 +84,7 @@ def train_complete_classifier(
             optimizer=optimizer,
             mode=mode,
             device=device,
+            model_name=classifier_name,  # type: ignore
             save_model=save_model,
         )
 
@@ -94,6 +106,7 @@ def train(
     test_size: float = 0.25,
     classifier: str = "SVC",
     model_name: str = "best_graph_model.pkl",
+    classifier_name: str = "best_classifier.pkl",
     device: str = "mps",
 ) -> Tuple[Union[Graph2Vec, NetLSD, DeepWalk], Dict[str, float]]:
     """
@@ -351,7 +364,8 @@ def train(
         classifier=classifier,
         mode=mode,
         device=device,
-        save_model=False,
+        save_model=True,
+        classifier_name=classifier_name,
     )
 
     tracemalloc.stop()

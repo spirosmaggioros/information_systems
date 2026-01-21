@@ -167,8 +167,9 @@ def run_train(args: Any) -> None:
             out_channels=args.out_channels,
             epochs=args.epochs,
             test_size=args.test_size,
-            classifier=args.classifier,
+            classifier="SVC" if args.classifier == "SVM" else "MLP",
             model_name=args.model_name,
+            classifier_name=args.classifier_name,
             device=args.device,
         )
     else:
@@ -476,7 +477,15 @@ def main() -> None:
         type=str,
         default="dl_trainer_best_model.pth",
         required=False,
-        help="Only for torch geometric: Specify the name of saved model weights",
+        help="Specify the name of saved model weights",
+    )
+
+    train.add_argument(
+        "--classifier_name",
+        type=str,
+        default="classifier_best.pth",
+        required=False,
+        help="Specify the name of saved classifier weights",
     )
 
     train.add_argument(
