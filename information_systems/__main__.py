@@ -33,7 +33,7 @@ from visualization.manifold import visualize_embeddings_manifold
 
 GRAPH_MODELS = ["graph2vec", "netlsd", "deepwalk"]
 TORCH_GEOMETRIC_MODELS = ["gcn", "gat", "gin", "pna"]
-CLASSIFIERS = ["MLP", "SVM"]
+CLASSIFIERS = ["MLP", "SVC"]
 
 
 def compute_deg_hist(data: list[Data], labels: list, test_size: float) -> torch.Tensor:

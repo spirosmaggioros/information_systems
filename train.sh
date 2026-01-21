@@ -1,7 +1,7 @@
 information_systems train --model graph2vec \
                           --dataset_dir data/MUTAG \
                           --test_size 0.25 \
-                          --classifier SVM \
+                          --classifier SVC \
                           --device mps \
                           --out_channels 128 \
                           --epochs 100 \
