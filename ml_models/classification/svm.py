@@ -112,3 +112,13 @@ class SVMModel:
         """
         with open(filename, "wb") as f:
             pickle.dump(self.model, f)
+
+    def load(self, filename: str) -> None:
+        """
+        Loads a pre-trained model from .pkl format
+
+        :param filename: The filename(.pkl suffix) of pre-trained model
+        :type filename: str
+        """
+        with open(filename, "rb") as f:
+            self.model = pickle.load(f)

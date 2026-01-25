@@ -1,8 +1,7 @@
-from typing import Any, Optional
+from typing import Any
 
 import optuna
 from sklearn.model_selection import cross_validate, train_test_split
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from ml_models.classification.svm import SVMModel
@@ -15,7 +14,6 @@ def train(
     graph_embeddings: list,
     labels: list,
     mode: str,
-    classifier_name: Optional[str] = None,
 ) -> Any:
     """
     SVC trainer
@@ -25,11 +23,13 @@ def train(
     :param labels: Labels of graphs/nodes for each graph embedding
     :type labels: list
 
-    :return: The best estima"tor of the optuna study
+    :return: The best estimator of the optuna study
     """
 
+    scaler = StandardScaler()
+    scaled_embeddings = scaler.fit_transform(graph_embeddings)
     X_train, X_val, y_train, y_val = train_test_split(
-        graph_embeddings,
+        scaled_embeddings,
         labels,
         test_size=0.25,
         stratify=labels,
@@ -47,10 +47,8 @@ def train(
         auc_scorer = "roc_auc" if mode == "binary" else "roc_auc_ovr"
         scoring = ["f1_macro", auc_scorer, "accuracy"]
 
-        pipeline = Pipeline([("scaler", StandardScaler()), ("svm", model.get_model())])
-
         scores = cross_validate(
-            pipeline,
+            model.get_model(),
             X_train,
             y_train,
             scoring=scoring,
@@ -78,19 +76,11 @@ def train(
         C=best_hyperparams["C"],
         kernel=best_hyperparams["kernel"],
     )
-
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_val_scaled = scaler.transform(X_val)
-
-    best_model.fit(X_train_scaled, y_train)
-    y_preds = best_model.predict(X_val_scaled)
-    y_preds_proba = best_model.predict_proba(X_val_scaled)
+    best_model.fit(X_train, y_train)
+    y_preds = best_model.predict(X_val)
+    y_preds_proba = best_model.predict_proba(X_val)
     stats = compute_metrics(
         y_preds=y_preds, y_hat=y_val, mode=mode, y_preds_proba=y_preds_proba
     )
-
-    if classifier_name is not None:
-        best_model.save(classifier_name)
 
     return best_model, stats

@@ -1,6 +1,6 @@
 import ast
 import tracemalloc
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -11,12 +11,13 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from ml_models.classification.mlp import MLP, MLPDataset
+from ml_models.classification.svm import SVMModel
 from ml_models.graph_models.deepwalk import DeepWalk
 from ml_models.graph_models.graph2vec import Graph2Vec
 from ml_models.graph_models.netLSD import NetLSD
 from trainer.dl_trainer import train as train_dl
 from trainer.svm_trainer import train as train_svm
-from trainer.utils import convert_embeddings_to_real
+from trainer.utils import convert_embeddings_to_real, save_torch_model
 
 
 def train_complete_classifier(
@@ -29,21 +30,17 @@ def train_complete_classifier(
     classifier: str = "SVC",
     device: str = "mps",
     save_model: bool = False,
-    classifier_name: Optional[str] = None,
-) -> dict:
+) -> Tuple[dict, Any]:
     """
     Trains the passed classifier on graph embeddings computed by a graph model
     """
     clf = None
     metrics = {"AUROC": 0.0, "F1": 0.0, "Accuracy": 0.0}
     if classifier == "SVC":
-        if classifier_name is not None:
-            assert ".pkl" in classifier_name
         clf, stats = train_svm(
             mode=mode,
             graph_embeddings=X_train,
             labels=y_train,
-            classifier_name=classifier_name,
         )
         metrics["AUROC"] = stats["AUC"]
         metrics["F1"] = stats["F1"]
@@ -71,9 +68,6 @@ def train_complete_classifier(
             amsgrad=True,
         )
 
-        if classifier_name is not None:
-            assert ".pth" in classifier_name
-
         _, best_stats = train_dl(
             model=clf,
             model_type="torch",
@@ -84,7 +78,6 @@ def train_complete_classifier(
             optimizer=optimizer,
             mode=mode,
             device=device,
-            model_name=classifier_name,  # type: ignore
             save_model=save_model,
         )
 
@@ -92,7 +85,7 @@ def train_complete_classifier(
         metrics["F1"] = best_stats["test_f1"]
         metrics["Accuracy"] = best_stats["test_acc"]
 
-    return metrics
+    return metrics, clf
 
 
 def train(
@@ -260,7 +253,7 @@ def train(
             stratify=labels,
         )
 
-        metrics = train_complete_classifier(
+        metrics, clf = train_complete_classifier(
             X_train=X_train,
             X_test=X_test,
             y_train=y_train,
@@ -277,6 +270,7 @@ def train(
 
         checkpoint = {
             "trial_params": trial.params,
+            "clf": clf,
             "F1": metrics["F1"],
             "AUROC": metrics["AUROC"],
             "Accuracy": metrics["Accuracy"],
@@ -292,7 +286,14 @@ def train(
     best_trial = study.best_trial
     best_checkpoint = best_trial.user_attrs["checkpoint"]
     best_hyperparams = best_checkpoint["trial_params"]
+    best_classifier = best_checkpoint["clf"]
     best_model: Union[Graph2Vec, NetLSD, DeepWalk]
+
+    if isinstance(best_classifier, SVMModel):
+        best_classifier.save(classifier_name)
+    else:
+        save_torch_model(best_classifier, classifier_name, device)
+    print(f"Classifier saved at {classifier_name}")
 
     if graph_model == "graph2vec":
         best_model_g2v = Graph2Vec(
@@ -301,7 +302,7 @@ def train(
             learning_rate=best_hyperparams["learning_rate"],
         )
         best_model_g2v.fit(graphs)
-        embeddings = best_model_g2v.get_embeddings()
+        # embeddings = best_model_g2v.get_embeddings()
         best_model = best_model_g2v
     elif graph_model == "deepwalk":
         best_model_dw = DeepWalk(
@@ -312,7 +313,7 @@ def train(
             learning_rate=best_hyperparams["learning_rate"],
         )
         best_model_dw.fit(graphs)
-        embeddings = best_model_dw.get_embeddings()
+        # embeddings = best_model_dw.get_embeddings()
         best_model = best_model_dw
     else:
         eigenvalues_choice = best_hyperparams["eigenvalues"]
@@ -340,35 +341,19 @@ def train(
             normalization=best_hyperparams["normalization"],
             normalized_laplacian=best_hyperparams["normalized_laplacian"],
         )
-        embeddings_raw = [best_model_netlsd.fit_transform(g) for g in graphs]
-        embeddings = convert_embeddings_to_real(embeddings_raw)
+        # embeddings_raw = [best_model_netlsd.fit_transform(g) for g in graphs]
+        # embeddings = convert_embeddings_to_real(embeddings_raw)
         best_model = best_model_netlsd
 
     best_model.save(model_name)
     print(f"Model saved at {model_name}")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        embeddings,
-        labels,
-        test_size=test_size,
-        random_state=42,
-        stratify=labels,
-    )
-
-    metrics = train_complete_classifier(
-        X_train=X_train,
-        X_test=X_test,
-        y_train=y_train,
-        y_test=y_test,
-        num_classes=num_classes,
-        classifier=classifier,
-        mode=mode,
-        device=device,
-        save_model=True,
-        classifier_name=classifier_name,
-    )
-
     tracemalloc.stop()
     print(f"Best Hyperparams Peak Memory: {best_checkpoint['peak_memory_mb']:.2f} MB")
+    metrics = {
+        "Accuracy": best_checkpoint["Accuracy"],
+        "AUC": best_checkpoint["AUROC"],
+        "F1": best_checkpoint["F1"],
+    }
 
     return best_model, metrics

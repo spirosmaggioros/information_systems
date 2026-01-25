@@ -16,6 +16,8 @@ from dataloader.dataloader import (
     remove_random_edges,
     shuffle_node_attributes,
 )
+from ml_models.classification.mlp import MLP
+from ml_models.classification.svm import SVMModel
 from ml_models.graph_models.deepwalk import DeepWalk
 from ml_models.graph_models.graph2vec import Graph2Vec
 from ml_models.graph_models.inference import inference as graph_model_inference
@@ -33,7 +35,7 @@ from visualization.manifold import visualize_embeddings_manifold
 
 GRAPH_MODELS = ["graph2vec", "netlsd", "deepwalk"]
 TORCH_GEOMETRIC_MODELS = ["gcn", "gat", "gin", "pna"]
-CLASSIFIERS = ["MLP", "SVC"]
+CLASSIFIERS = ["MLP", "SVM"]
 
 
 def compute_deg_hist(data: list[Data], labels: list, test_size: float) -> torch.Tensor:
@@ -248,11 +250,25 @@ def run_inference(args: Any) -> None:
             remove_random_edges(graph, args.remove_random_edges)
 
     if args.model in ["graph2vec", "netlsd", "deepwalk"]:
+        _classifier = None
+        if args.classifier != "":
+            if args.classifier == "SVM":
+                _classifier = SVMModel(
+                    mode="binary" if num_classes == 2 else "multiclass"
+                )
+            elif args.classifier == "MLP":
+                _classifier = MLP(
+                    num_classes=1 if args.mode == "binary" else num_classes
+                )
         graph_model_inference(
             model=model,
             data=graphs,
             model_weights=args.model_weights,
             out_json=args.out_json,
+            classifier=_classifier,
+            classifier_weights=(
+                args.classifier_weights if _classifier is not None else None
+            ),
             ground_truth_labels=labels,
         )
     else:
@@ -504,7 +520,7 @@ def main() -> None:
         "--dataset_dir",
         type=str,
         required=True,
-        help="[REQUIRED] Select a dataset to train on. We currently support a specific amount of datasets, please read README for more information",
+        help="[REQUIRED] Select a dataset to perform inference on",
     )
 
     inference.add_argument(
@@ -515,10 +531,26 @@ def main() -> None:
     )
 
     inference.add_argument(
+        "--classifier",
+        type=str,
+        default="",
+        required=False,
+        help="Optionally pass a classifier to also predict classes",
+    )
+
+    inference.add_argument(
         "--model_weights",
         type=str,
         required=True,
         help="[REQUIRED] Absolute path of the model weights",
+    )
+
+    inference.add_argument(
+        "--classifier_weights",
+        type=str,
+        default="",
+        required=False,
+        help="Only required when --classifier is given",
     )
 
     inference.add_argument(
