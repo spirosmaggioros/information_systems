@@ -86,11 +86,11 @@ def inference(
         if isinstance(classifier, SVMModel):
             y_preds = list(classifier.predict(scaled_features))
         else:
-            scaled_features = torch.tensor(scaled_features, dtype=torch.float32)
-            scaled_features = scaled_features.float()
+            features = torch.tensor(out_features, dtype=torch.float32)
+            features = features.float()
 
             with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
-                _y_preds = classifier(scaled_features)
+                _y_preds = classifier(features)
 
             if classifier.num_classes == 1:
                 _y_preds = _y_preds.squeeze(-1)
