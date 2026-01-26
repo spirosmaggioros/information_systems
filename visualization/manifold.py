@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import umap
-import umap.plot
+
+# import umap
+# import umap.plot
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE, Isomap
 
@@ -36,38 +36,42 @@ def visualize_embeddings_manifold(
     elif method == "Isomap":
         model = Isomap(n_components=n_components)
     else:
-        model = umap.UMAP(n_neighbors=150, min_dist=0.2)
+        print("Not implemented for UMAP, See comments bellow")
+        exit(0)
+        # User has to manually install umap and uncomment these lines
+        # as we had a dependency conflict with UMAP and karateclub
+        # model = umap.UMAP(n_neighbors=150, min_dist=0.2)
 
-    if not isinstance(model, umap.UMAP) and len(features[0]) > 50:
+    if len(features[0]) > 50:
         pca_features = PCA(n_components=50).fit_transform(features)
         latent_features = model.fit_transform(pca_features)
     else:
-        if isinstance(model, umap.UMAP):
-            model.fit(features)
-        else:
-            latent_features = model.fit_transform(features)
+        # if isinstance(model, umap.UMAP):
+        #     model.fit(features)
+        # else:
+        latent_features = model.fit_transform(features)
 
     if n_components == 2:
-        if isinstance(model, umap.UMAP):
-            umap.plot.points(model, labels=np.array(labels))
-        else:
-            scatter = plt.scatter(
-                [x[0] for x in latent_features],
-                [x[1] for x in latent_features],
-                c=labels,
-                cmap="tab10",
-            )
-            plt.xlabel("X")
-            plt.ylabel("Y")
-            plt.grid(True)
-            plt.title(f"Latent embeddings with {method}")
+        # if isinstance(model, umap.UMAP):
+        #     umap.plot.points(model, labels=np.array(labels))
+        # else:
+        scatter = plt.scatter(
+            [x[0] for x in latent_features],
+            [x[1] for x in latent_features],
+            c=labels,
+            cmap="tab10",
+        )
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.grid(True)
+        plt.title(f"Latent embeddings with {method}")
 
-            cbar = plt.colorbar(scatter)
-            cbar.set_label("Labels")
+        cbar = plt.colorbar(scatter)
+        cbar.set_label("Labels")
     else:
-        if isinstance(model, umap.UMAP):
-            print("3D manifold for UMAP is not available!")
-            exit(0)
+        # if isinstance(model, umap.UMAP):
+        #     print("3D manifold for UMAP is not available!")
+        #     exit(0)
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
