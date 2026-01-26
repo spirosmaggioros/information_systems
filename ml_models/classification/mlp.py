@@ -40,7 +40,7 @@ class MLP(nn.Module):
         dropout: float = 0.2,
         use_bn: bool = False,
         bn: str = "bn",
-        device: str = "mps",
+        device: str = "cpu",
         init_input: int = -1,
     ) -> None:
         """
@@ -63,6 +63,7 @@ class MLP(nn.Module):
         self.dropout = dropout
         self.use_bn = use_bn
         self.bn = bn
+        self.num_classes = num_classes
 
         def mlp_layer(hidden_size: int) -> nn.Module:
             layers = [nn.LazyLinear(hidden_size)]

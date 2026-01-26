@@ -6,10 +6,12 @@ from typing import Any, List, Optional
 
 import networkx as nx
 import numpy as np
+import torch
 from sklearn.preprocessing import StandardScaler
 
 from ml_models.classification.mlp import MLP
 from ml_models.classification.svm import SVMModel
+from trainer.utils import load_torch_model
 
 
 def inference(
@@ -41,8 +43,7 @@ def inference(
     if classifier is not None:
         assert classifier_weights is not None
         if isinstance(classifier, MLP):
-            print("Inference not yet implemented for MLP!")
-            exit(0)
+            load_torch_model(classifier, classifier_weights, "cpu")
         else:
             assert isinstance(classifier, SVMModel)
             classifier.load(classifier_weights)
@@ -82,7 +83,24 @@ def inference(
     }
 
     if classifier is not None:
-        y_preds = list(classifier.predict(scaled_features))
+        if isinstance(classifier, SVMModel):
+            y_preds = list(classifier.predict(scaled_features))
+        else:
+            scaled_features = torch.tensor(scaled_features, dtype=torch.float32)
+            scaled_features = scaled_features.float()
+
+            with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
+                _y_preds = classifier(scaled_features)
+
+            if classifier.num_classes == 1:
+                _y_preds = _y_preds.squeeze(-1)
+
+            y_preds = (
+                (torch.sigmoid(_y_preds) > 0.5).float()
+                if classifier.num_classes == 1
+                else torch.argmax(_y_preds, dim=1)
+            )
+
         inference_res["y_preds"] = [int(x) for x in y_preds]
 
     with open(out_json, "w") as f:

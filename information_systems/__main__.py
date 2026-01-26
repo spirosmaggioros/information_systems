@@ -252,14 +252,13 @@ def run_inference(args: Any) -> None:
     if args.model in ["graph2vec", "netlsd", "deepwalk"]:
         _classifier = None
         if args.classifier != "":
+            mode = "binary" if num_classes == 2 else "multiclass"
             if args.classifier == "SVM":
                 _classifier = SVMModel(
                     mode="binary" if num_classes == 2 else "multiclass"
                 )
             elif args.classifier == "MLP":
-                _classifier = MLP(
-                    num_classes=1 if args.mode == "binary" else num_classes
-                )
+                _classifier = MLP(num_classes=1 if mode == "binary" else num_classes)
         graph_model_inference(
             model=model,
             data=graphs,
