@@ -73,7 +73,6 @@ def inference(
     peak_memory_mb = peak / (1024 * 1024)
 
     scaled_features = StandardScaler().fit_transform(out_features)
-    y_preds = list(classifier.predict(scaled_features))  # type: ignore
 
     inference_res = {
         "out_features": out_features,
@@ -83,6 +82,7 @@ def inference(
     }
 
     if classifier is not None:
+        y_preds = list(classifier.predict(scaled_features))
         inference_res["y_preds"] = [int(x) for x in y_preds]
 
     with open(out_json, "w") as f:
