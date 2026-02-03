@@ -18,7 +18,7 @@ setup(
     download_url="https://github.com/spirosmaggioros/information_systems/",
     url="https://github.com/spirosmaggioros/information_systems/",
     packages=find_packages(exclude=[".github"]),
-    python_requires=">=3.9",
+    python_requires="<=3.10",
     install_requires=[
         "networkx",
         "torchvision",

@@ -1,6 +1,6 @@
 # Analysis on modern Graph Representation Learning and Graph Neural Network models
 
-In this repo, you can train a GRL or GNN model on OGB datasets, perform inference on your own graphs or analysis on your computed graph embeddings. Our full documentation is hosted at: [TODO]
+In this repo, you can train a GRL or GNN model on graph datasets (TU Dataset format), perform inference on your own graphs, conduct robustness analysis, or analyze your computed graph embeddings.
 
 ## Included models
   - [X] Graph2Vec
@@ -11,7 +11,61 @@ In this repo, you can train a GRL or GNN model on OGB datasets, perform inferenc
   - [X] GIN
   - [X] PNA
 
-For embedding analysis we also include code for t-SNE, Isomap, UMAP and k-d tree visualizations.
+
+For embedding analysis we also include code for t-SNE and Isomap visualizations.
+
+> **Note:** UMAP support is available but requires manual installation due to dependency conflicts with `karateclub`. See the visualization module for details.
+
+## Classification Models
+For downstream classification on graph embeddings:
+- [X] SVM (Support Vector Machine with RBF/Linear kernels)
+- [X] MLP (Multi-Layer Perceptron)
+
+## Clustering Models
+For unsupervised analysis of graph embeddings:
+- [X] K-Means
+- [X] Spectral Clustering
+
+## Visualization Tools
+- [X] t-SNE manifold visualization
+- [X] Isomap manifold visualization
+- [X] Cluster scatter plots
+- [X] Graph structure visualization (with node/edge labels)
+
+## Perturbation & Robustness Analysis
+Tools for testing model robustness under graph perturbations:
+- [X] Random edge addition
+- [X] Random edge removal
+- [X] Node attribute shuffling
+
+## Evaluation Metrics
+All training runs report:
+- Accuracy
+- AUROC (Area Under ROC Curve)
+- F1 Score (macro-averaged for multiclass)
+- Precision
+- Recall
+- Specificity
+- Confusion Matrix
+- Peak Memory Usage
+- Training Time
+
+## Supported Dataset Format
+This package supports datasets in the **TU Dataset format** (e.g., MUTAG, ENZYMES, PROTEINS, IMDB-MULTI). The dataset folder should contain:
+- `*_A.txt` - Edge list
+- `*_graph_indicator.txt` - Graph membership for each node
+- `*_graph_labels.txt` - Graph class labels
+- `*_node_labels.txt` (optional) - Node labels
+- `*_node_attributes.txt` (optional) - Node feature vectors
+- `*_edge_labels.txt` (optional) - Edge labels
+
+Example structure:
+data/MUTAG/
+├── MUTAG_A.txt
+├── MUTAG_graph_indicator.txt
+├── MUTAG_graph_labels.txt
+├── MUTAG_node_labels.txt
+└── MUTAG_edge_labels.txt
 
 ## Installation
 To install as a pypi package, in the root directory, just do:
@@ -20,126 +74,31 @@ pip3 install .
 ```
 Package name is: **information_systems**, so make sure to check if this exists.
 
-## Example:
-
-### Train a GRL model
-```python
-from dataloader.dataloader import ds_to_graphs
-from trainer.graph_trainer import train as train_graph
-
-from visualization.manifold import visualize_embeddings_manifold
-
-data = ds_to_graphs("data/MUTAG")
-best_model, metrics = train_graph(
-    graph_model="graph2vec",
-    graphs=data["graphs"],
-    labels=data["graph_classes"],
-    num_classes=6,
-    mode="multiclass",
-    out_channels=256,
-    epochs=100,
-    test_size=0.2,
-    classifier="SVM",
-    model_name="graph2vec_best.pkl",
-    device="cpu",
-)
-embeddings = best_model.infer(data["graphs"])
-
-visualize_embeddings_manifold(
-    features=embeddings,
-    labels=data["graph_classes"],
-    method="TSNE",
-    n_components=2,
-    save_to="tsne_results.png"
-)
-```
-
-### Train a GNN model
-```python
-import torch
-from torch import nn
-
-from dataloader.dataloader import ds_to_graphs, create_graph_dataloaders
-from ml_models.torch_geometric.gat import GAT
-from trainer.dl_trainer import train as train_torch_geometric
-
-from visualization.manifold import visualize_embeddings_manifold
-
-data = ds_to_graphs("data/ENZYMES")
-
-train_dataloader, test_dataloader = create_graph_dataloaders(
-    data=data["graphs"],
-    labels=data["graph_classes"],
-    batch_size=2,
-    test_size=0.2,
-    device="cpu",
-)
-
-model = GAT(
-    task="graph_classification",
-    in_channels=18,
-    hid_channels=128,
-    out_channels=128,
-    num_classes=6
-)
-
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.1, amsgrad=True)
-
-training_results, best_checkpoint = train_torch_geometric(
-    model=model,
-    model_type="torch_geometric",
-    train_dataloader=train_dataloader,
-    test_dataloader=test_dataloader,
-    loss_fn=loss_fn,
-    optimizer=optimizer,
-    mode="multiclass",
-    num_classes=6,
-    epochs=1000,
-    patience=100,
-    device="cpu",
-    model_name="gat_best.pth",
-    save_model=True,
-)
-
-from ml_models.torch_geometric.inference import inference as torch_geometric_inference
-
-y_features, y_preds = torch_geometric_inference(
-    model=model,
-    mode="multiclass",
-    dataloader=test_dataloader,
-    model_weights="gat_best.pth",
-    out_json="inference_res.json",
-)
-
-# you can perform analysis now with the same code as in the GRL example
-```
-
 ## CLI
 
-We also implemented a CLI so you don't have to write code every time you need to train, perform inference or even perform simple analysis. You can do **information_systems --help** for more information, but we will list some examples below:
+We implemented a CLI so you don't have to write code every time you need to train, perform inference or even perform simple analysis. You can do **information_systems --help** for more information, but we will list some examples below:
 
 ### Train a model:
 ```bash
 
 information_systems train --model graph2vec \
                           --dataset_dir data/MUTAG \
-                          --test_size 0.2 \
+                          --test_size 0.25 \
                           --classifier SVM \
-                          --device cpu \
                           --out_channels 256 \
                           --epochs 100 \
                           --model_name graph2vec_model.pkl \
+                          --device cpu \
 ```
 
 ```bash
 information_systems train --model gat \
                           --dataset_dir data/ENZYMES \
-                          --test_size 0.2 \
+                          --test_size 0.25 \
                           --classifier SVM \
-                          --hidden_channels 256 \
-                          --out_channels 256 \
-                          --dropout 0.3 \
+                          --hidden_channels 64 \
+                          --out_channels 128 \
+                          --dropout 0.5 \
                           --batch_size 2 \
                           --epochs 1000 \
                           --patience 100 \
@@ -149,6 +108,7 @@ information_systems train --model gat \
 ### Perform inference with a pre-trained model
 ```bash
 information_systems inference --model graph2vec \
+                              --out_channels 128 \
                               --dataset_dir data/MUTAG \
                               --model_weights graph2vec_model.pkl \
                               --out_json graph2vec_inference.json \
@@ -156,13 +116,54 @@ information_systems inference --model graph2vec \
 
 ```bash
 information_systems inference --model gat \
+                              --num_layers 2 \
+                              --hidden_channels 64 \
+                              --out_channels 128 \
+                              --dropout 0.5 \
                               --dataset_dir data/ENZYMES \
                               --model_weights gat_best.pth \
                               --out_json gat_inference.json \
+```
+
+### Perform inference with perturbations
+```bash
+# Add 20% random edges
+information_systems inference --model gin \
+                              --dataset_dir data/ENZYMES \
+                              --model_weights gin_best.pth \
+                              --out_json gin_perturbed.json \
+                              --add_random_edges 0.2
+
+# Remove 15% random edges
+information_systems inference --model graph2vec \
+                              --out_channels 128 \
+                              --dataset_dir data/MUTAG \
+                              --model_weights graph2vec_model.pkl \
+                              --out_json graph2vec_perturbed.json \
+                              --remove_random_edges 0.15
+
+# Shuffle node attributes
+information_systems inference --model gat \
+                              --num_layers 2 \
+                              --hidden_channels 64 \
+                              --out_channels 128 \
+                              --dataset_dir data/ENZYMES \
+                              --model_weights gat_best.pth \
+                              --out_json gat_shuffled.json \
+                              --shuffle_node_attributes
 ```
 
 ### Perform analysis on output embeddings
 ```bash
 information_systems analysis --in_jsons gat_inference.json \
                              --manifold TSNE
+```
+
+### Perform clustering analysis on embeddings
+```bash
+information_systems analysis --in_jsons gat_inference.json \
+                             --clustering kmeans
+                             
+information_systems analysis --in_jsons gat_inference.json \
+                             --clustering spectral
 ```
